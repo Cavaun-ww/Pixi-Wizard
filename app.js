@@ -23,6 +23,9 @@
 
   let toastTimer;
   function toast(msg, isErr) {
+    if (isErr && /failed to fetch|networkerror|load failed/i.test(String(msg))) {
+      msg = "Can't reach the server right now. Check your internet connection and try again.";
+    }
     let el = document.getElementById("toast");
     if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
     el.textContent = msg;
@@ -86,6 +89,10 @@
   async function openUpgrade(onDone) {
     const s = await getSession();
     if (!s) { location.href = "auth.html?next=" + encodeURIComponent("dashboard.html?upgrade=1"); return; }
+    if (/YOUR-/.test(C.PAYPAL_CLIENT_ID + C.PAYPAL_PLAN_ID)) {
+      toast("✨ Pro subscriptions are coming soon! Check back shortly.");
+      return;
+    }
 
     let bg = document.getElementById("upgrade-modal");
     if (!bg) {
