@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>AR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap">
+<!-- Load A-Frame + MindAR BEFORE body so custom elements are ready -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root { --accent:#4d8dff; --accent-2:#7fb0ff; --text:#e8eef8; --text-2:#a9b8d0; --muted:#6d7f9e; --line:#1b2a45; --good:#3ddc97; --bad:#ff6b6b; }
+html, body {
+  margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+  /* NO body background — MindAR camera video must show through. Splash provides the background. */
+  font-family:"Outfit",system-ui,sans-serif; font-weight:300; color:var(--text);
+}
+a-scene { position:fixed!important; top:0!important; left:0!important; width:100%!important; height:100%!important; z-index:2; }
+
+#splash {
+  position:fixed; inset:0; z-index:1000;
+  background:#060b16; background-image:radial-gradient(900px 500px at 50% -150px,#12224a 0%,transparent 70%); background-repeat:no-repeat;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:24px 20px; overflow-y:auto; text-align:center;
+}
+.inner { width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; }
+.eyebrow { font-size:0.7rem; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent-2); margin-bottom:14px; }
+#target-img { width:100%; max-height:34vh; object-fit:contain; border-radius:14px; border:1px solid var(--line); background:#000; margin-bottom:16px; }
+h1 { font-size:1.6rem; font-weight:400; line-height:1.2; }
+.by { color:var(--text-2); font-size:0.95rem; margin-top:4px; }
+.by a { color:var(--accent-2); text-decoration:none; }
+.steps { text-align:left; width:100%; margin:20px 0; display:grid; gap:10px; }
+.step { display:flex; gap:12px; align-items:flex-start; font-size:0.92rem; color:var(--text-2); }
+.step b { font-weight:500; color:var(--text); }
+.step .n { flex:0 0 24px; height:24px; border-radius:50%; background:#12244a; color:var(--accent-2); display:grid; place-items:center; font-size:0.78rem; }
+#start-btn {
+  width:100%; padding:16px; border-radius:14px; border:0;
+  background:var(--accent); color:#fff; font:inherit; font-size:1.05rem; font-weight:500; cursor:pointer;
+}
+#start-btn:disabled { background:#1b2a45; color:var(--muted); cursor:default; }
+#status-line { font-size:0.8rem; color:var(--muted); margin-top:10px; min-height:1.2em; }
+#status-line.err { color:var(--bad); }
+.desk { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); width:100%; display:none; flex-direction:column; align-items:center; gap:10px; font-size:0.85rem; color:var(--text-2); }
+.desk.show { display:flex; }
+#qr-target { background:#fff; padding:8px; border-radius:8px; }
+.foot { margin-top:22px; font-size:0.78rem; color:var(--muted); }
+.foot a { color:var(--text-2); }
+
+#ar-close {
+  display:none; position:fixed; top:16px; right:16px; z-index:2000;
+  background:rgba(0,0,0,0.55); color:#fff; border:1px solid rgba(255,255,255,.15); border-radius:50%;
+  width:44px; height:44px; font-size:1rem; cursor:pointer; align-items:center; justify-content:center;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+#ar-close.show { display:flex; }
+.pill-float {
+  display:none; position:fixed; left:50%; transform:translateX(-50%); z-index:2000;
+  background:rgba(0,0,0,0.65); color:#fff; border:1px solid rgba(255,255,255,.15);
+  padding:10px 18px; border-radius:100px; font-size:0.85rem; white-space:nowrap;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); font-family:inherit;
+}
+#scan-hint { bottom:28px; }
+#unmute { bottom:84px; cursor:pointer; }
+.pill-float.show { display:block; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="inner">
+    <div class="eyebrow">Augmented reality</div>
+    <img id="target-img" alt="" hidden>
+    <h1 id="title">Loading…</h1>
+    <div class="by" id="by"></div>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><span>Tap <b>Start AR camera</b> and allow camera access</span></div>
+      <div class="step"><span class="n">2</span><span>Point your phone at <b>the image above</b></span></div>
+      <div class="step"><span class="n">3</span><span>The <b>video</b> plays right on top of it</span></div>
+    </div>
+    <button id="start-btn" disabled>Loading…</button>
+    <div id="status-line"></div>
+    <div class="desk" id="desk">
+      <span>On a computer? Scan this to open it on your phone.</span>
+      <div id="qr-target"></div>
+    </div>
+    <div class="foot">Content is user-generated. <a href="create.html">Make your own AR</a></div>
+  </div>
+</div>
+
+<button id="ar-close" aria-label="Close camera">✕</button>
+<div class="pill-float" id="scan-hint">Point at the image</div>
+<button class="pill-float" id="unmute">🔇 Tap for sound</button>
+
+<script>
+(function () {
+  var C = window.APP_CONFIG;
+  var sb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+  var $ = function (id) { return document.getElementById(id); };
+  var slug = new URLSearchParams(location.search).get("x") || "";
+  var xp = null, arVid = null;
+
+  function setStatus(msg, cls) { var el = $("status-line"); el.textContent = msg; el.className = cls || ""; }
+  function pub(path) { return sb.storage.from("ar").getPublicUrl(path).data.publicUrl; }
+
+  // QR for desktop visitors
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
+  if (!isMobile) {
+    $("desk").classList.add("show");
+    var s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    s.onload = function () { new QRCode($("qr-target"), { text: location.href, width: 120, height: 120, colorDark: "#000", colorLight: "#fff", correctLevel: QRCode.CorrectLevel.M }); };
+    document.head.appendChild(s);
+  }
+
+  // ── load the experience ─────────────────────────────────────
+  (async function load() {
+    if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
+    if (!slug) { $("title").textContent = "AR experience not found"; return; }
+    var res = await sb.from("experiences")
+      .select("slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, profiles(handle, display_name)")
+      .eq("slug", slug).maybeSingle();
+    if (res.error || !res.data) {
+      $("title").textContent = "AR experience not found";
+      $("by").textContent = "This link may have been removed.";
+      $("start-btn").textContent = "Unavailable";
+      return;
+    }
+    xp = res.data;
+    document.title = xp.title + " · AR";
+    $("title").textContent = xp.title;
+    var p = xp.profiles;
+    if (p && p.handle) {
+      $("by").innerHTML = 'by <a href="u.html?h=' + encodeURIComponent(p.handle) + '"></a>';
+      $("by").querySelector("a").textContent = p.display_name || "@" + p.handle;
+    }
+    $("target-img").src = pub(xp.image_path);
+    $("target-img").hidden = false;
+    $("start-btn").textContent = "Start AR camera →";
+    $("start-btn").disabled = false;
+  })();
+
+  // ── video overlay component: plane sized to the photo, video cropped to cover it ──
+  if (typeof AFRAME !== "undefined") {
+    AFRAME.registerComponent("video-overlay", {
+      init: function () {
+        var video = arVid;
+        if (!video) return;
+        var imgA = xp.image_aspect || 1, vidA = xp.video_aspect || 16 / 9;
+        var texture = new THREE.VideoTexture(video);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        if (vidA > imgA) { texture.repeat.x = imgA / vidA; texture.offset.x = (1 - texture.repeat.x) / 2; }
+        else { texture.repeat.y = vidA / imgA; texture.offset.y = (1 - texture.repeat.y) / 2; }
+        var geo = new THREE.PlaneGeometry(1, 1 / imgA);
+        var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0 });
+        var mesh = new THREE.Mesh(geo, mat);
+        this.el.setObject3D("vid", mesh);
+        this.mat = mat;
+        this.visible = false;
+
+        var self = this, targetEl = this.el.parentNode;
+        targetEl.addEventListener("targetFound", function () {
+          self.visible = true;
+          video._wanted = true;
+          $("scan-hint").classList.remove("show");
+          video.play().catch(function () {
+            // sound blocked by the browser → play muted and offer a tap-for-sound button
+            video.muted = true;
+            video.play().catch(function () {});
+            $("unmute").classList.add("show");
+          });
+        });
+        targetEl.addEventListener("targetLost", function () {
+          self.visible = false;
+          video._wanted = false;
+          video.pause();
+          $("scan-hint").classList.add("show");
+        });
+      },
+      tick: function () {
+        if (!this.mat) return;
+        var target = this.visible ? 1 : 0;
+        this.mat.opacity += (target - this.mat.opacity) * 0.2; // quick fade in/out
+      },
+      remove: function () { this.el.removeObject3D("vid"); },
+    });
+  }
+
+  $("unmute").onclick = function () {
+    if (!arVid) return;
+    arVid.muted = false; arVid.volume = 1;
+    arVid.play().catch(function () {});
+    $("unmute").classList.remove("show");
+  };
+
+  // ── start / stop ────────────────────────────────────────────
+  $("start-btn").onclick = function startAR() {
+    if (!xp) return;
+    $("splash").style.display = "none";
+    $("ar-close").classList.add("show");
+    $("scan-hint").classList.add("show");
+
+    // overlay video (hidden off-screen — used as the AR texture)
+    arVid = document.createElement("video");
+    arVid.src = pub(xp.video_path);
+    arVid.crossOrigin = "anonymous";
+    arVid.loop = true; arVid.muted = false; arVid.volume = 1; arVid.playsInline = true;
+    arVid.setAttribute("playsinline", ""); arVid.setAttribute("webkit-playsinline", "");
+    arVid.preload = "auto";
+    arVid.style.cssText = "position:fixed;bottom:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(arVid);
+    // "unlock" playback with sound while we're still inside the tap (needed on iPhone)
+    var unlock = arVid.play();
+    if (unlock && unlock.then) unlock.then(function () { if (arVid && !arVid._wanted) { arVid.pause(); arVid.currentTime = 0; } }).catch(function () {});
+
+    // the moment MindAR injects its camera <video>, bring it forward so it's visible
+    var camObserver = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var nodes = mutations[i].addedNodes;
+        for (var j = 0; j < nodes.length; j++) {
+          var n = nodes[j];
+          if (n.nodeType === 1 && n.tagName === "VIDEO" && n !== arVid) {
+            [["position","fixed"],["top","0"],["left","0"],["width","100vw"],["height","100vh"],["object-fit","cover"],["z-index","1"],["display","block"],["background","#000"]]
+              .forEach(function (kv) { n.style.setProperty(kv[0], kv[1], "important"); });
+            camObserver.disconnect();
+          }
+        }
+      }
+    });
+    camObserver.observe(document.body, { childList: true, subtree: true });
+
+    var scene = document.createElement("a-scene");
+    scene.setAttribute("mindar-image",
+      "imageTargetSrc: " + pub(xp.mind_path) +
+      "; uiLoading: no; uiScanning: no; uiError: no" +
+      "; filterMinCF: 0.001; filterBeta: 0.001; warmupTolerance: 5; missTolerance: 5");
+    scene.setAttribute("vr-mode-ui", "enabled: false");
+    scene.setAttribute("device-orientation-permission-ui", "enabled: false");
+    scene.setAttribute("renderer", "colorManagement: true; alpha: true;");
+    scene.setAttribute("color-space", "sRGB");
+    scene.setAttribute("embedded", "");
+
+    var cam = document.createElement("a-camera");
+    cam.setAttribute("position", "0 0 0");
+    cam.setAttribute("look-controls", "enabled: false");
+    scene.appendChild(cam);
+
+    var t0 = document.createElement("a-entity");
+    t0.setAttribute("mindar-image-target", "targetIndex: 0");
+    var ov = document.createElement("a-entity");
+    ov.id = "overlay0";
+    ov.setAttribute("position", "0 0 0.01");
+    t0.appendChild(ov);
+    scene.appendChild(t0);
+
+    scene.addEventListener("loaded", function () { ov.setAttribute("video-overlay", ""); });
+    scene.addEventListener("arError", function () {
+      closeAR();
+      setStatus("Couldn't start the camera. Check camera permission and try again.", "err");
+    });
+    document.body.appendChild(scene);
+  };
+
+  function closeAR() {
+    var sceneEl = document.querySelector("a-scene");
+    if (sceneEl) {
+      try { var sys = sceneEl.systems["mindar-image-system"]; if (sys) sys.stop(); } catch (e) {}
+      sceneEl.parentNode.removeChild(sceneEl);
+    }
+    document.querySelectorAll("video").forEach(function (v) {
+      if (v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.remove(); }
+    });
+    $("ar-close").classList.remove("show");
+    $("scan-hint").classList.remove("show");
+    $("unmute").classList.remove("show");
+    $("splash").style.display = "";
+    if (arVid) { arVid.pause(); arVid.removeAttribute("src"); arVid.load(); arVid.remove(); arVid = null; }
+  }
+  $("ar-close").onclick = closeAR;
+})();
+</script>
+</body>
+</html>

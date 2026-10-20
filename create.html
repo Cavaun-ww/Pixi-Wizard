@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create · {site}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</head>
+<body>
+<main class="wrap">
+
+  <!-- shown while checking the plan -->
+  <div id="loading" class="muted" style="text-align:center;padding:60px 0">Loading…</div>
+
+  <!-- paywall: free experience already used and not subscribed -->
+  <div id="paywall" class="card" hidden style="text-align:center">
+    <div style="font-size:2.6rem">✨</div>
+    <h2 style="margin:10px 0 6px">You've used your free AR experience</h2>
+    <p class="muted" style="margin-bottom:22px">Go Pro to create unlimited experiences. Everything you've already made stays live on your page.</p>
+    <div class="price" style="font-size:2rem;margin-bottom:18px"><span class="js-price"></span> <small class="muted" style="font-size:1rem">/ <span class="js-period"></span></small></div>
+    <button class="btn btn-primary btn-lg btn-block" id="upgrade-btn">Upgrade to Pro</button>
+    <a class="btn btn-ghost btn-block" style="margin-top:10px" href="dashboard.html">Back to my page</a>
+  </div>
+
+  <!-- the creator -->
+  <div id="creator" hidden>
+    <div class="row" style="margin-bottom:18px">
+      <h2>New AR experience</h2>
+      <span class="spacer"></span>
+      <span class="pill good" id="free-pill" hidden>Free</span>
+      <span class="pill pro" id="pro-pill" hidden>Pro</span>
+    </div>
+
+    <div class="card">
+      <div class="step-head">
+        <div class="step-num" id="n1">1</div>
+        <div><div class="step-title">Target image</div><div class="step-sub">The physical image people will point at</div></div>
+      </div>
+      <div class="drop" id="drop-img">
+        <input type="file" id="file-img" accept="image/jpeg,image/png,image/webp">
+        <div class="empty-state">
+          <div class="icon">🖼️</div>
+          <div>Drop image here or <span class="browse">browse</span></div>
+          <div class="hint">JPG · PNG · WebP</div>
+        </div>
+      </div>
+      <p class="small muted" style="margin-top:12px">Tip: detailed, high-contrast images track best. Plain logos or mostly-empty images are hard for the camera to lock onto.</p>
+    </div>
+
+    <div class="card">
+      <div class="step-head">
+        <div class="step-num" id="n2">2</div>
+        <div><div class="step-title">Overlay video</div><div class="step-sub">The video that appears on top when scanned</div></div>
+      </div>
+      <div class="drop" id="drop-vid">
+        <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime">
+        <div class="empty-state">
+          <div class="icon">🎬</div>
+          <div>Drop video here or <span class="browse">browse</span></div>
+          <div class="hint">MP4 · WebM — keep under <span class="js-maxvid"></span> MB for fast loading</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="step-head">
+        <div class="step-num" id="n3">3</div>
+        <div><div class="step-title">Name it &amp; publish</div><div class="step-sub">It will appear on your public page</div></div>
+      </div>
+      <div class="stack">
+        <label class="field"><span>Title</span><input class="input" id="title" maxlength="80" placeholder="e.g. Summer tour poster"></label>
+        <label class="field" id="handle-field" hidden>
+          <span>Choose your page link</span>
+          <div class="input-prefix"><span class="pre" id="handle-pre"></span><input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+          <span class="small" id="handle-msg" style="margin-top:6px"></span>
+        </label>
+        <button class="btn btn-primary btn-lg btn-block" id="publish" disabled>Publish AR experience</button>
+        <div id="progress-wrap" hidden>
+          <div class="progress"><div id="bar"></div></div>
+          <p class="small muted" id="progress-msg" style="margin-top:8px"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- success -->
+  <div id="done" class="card" hidden style="text-align:center">
+    <div style="font-size:2.6rem">🎉</div>
+    <h2 style="margin:10px 0 6px">It's live!</h2>
+    <p class="muted" style="margin-bottom:20px">Print or display your photo, then share this link or QR code. Anyone who opens it and points their camera at the photo will see your video.</p>
+    <div class="qr-box" id="done-qr"></div>
+    <div class="input-prefix" style="margin:20px 0 12px"><input class="input" id="done-link" readonly style="border-radius:12px 0 0 12px"><button class="btn" id="done-copy" style="border-radius:0 12px 12px 0">Copy</button></div>
+    <div class="row" style="justify-content:center">
+      <a class="btn btn-primary" id="done-view">View in AR</a>
+      <a class="btn" href="dashboard.html">My page</a>
+      <a class="btn btn-ghost" href="create.html">Make another</a>
+    </div>
+  </div>
+</main>
+
+<script>
+(async function () {
+  App.mountHeader();
+  const C = App.C, sb = App.sb;
+  const $ = (id) => document.getElementById(id);
+  document.querySelectorAll(".js-price").forEach((e) => (e.textContent = C.PRO_PRICE_LABEL));
+  document.querySelectorAll(".js-period").forEach((e) => (e.textContent = C.PRO_PRICE_PERIOD));
+  document.querySelectorAll(".js-maxvid").forEach((e) => (e.textContent = C.MAX_VIDEO_MB));
+  $("upgrade-btn").onclick = () => App.openUpgrade(() => location.reload());
+
+  const session = await App.requireAuth();
+  const uid = session.user.id;
+
+  let plan, profile;
+  try {
+    [plan, { data: profile }] = await Promise.all([
+      App.myPlan(),
+      sb.from("profiles").select("handle").eq("id", uid).maybeSingle(),
+    ]);
+  } catch (e) {
+    $("loading").textContent = "Couldn't load your account: " + e.message;
+    return;
+  }
+  $("loading").hidden = true;
+  if (!plan.can_create) { $("paywall").hidden = false; return; }
+  $("creator").hidden = false;
+  (plan.is_pro ? $("pro-pill") : $("free-pill")).hidden = false;
+
+  // ── handle (page link) if they don't have one yet ─────────────
+  const needHandle = !profile || !profile.handle;
+  let handleOk = !needHandle;
+  if (needHandle) {
+    $("handle-field").hidden = false;
+    $("handle-pre").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=";
+    let t;
+    $("handle").addEventListener("input", () => {
+      const v = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+      $("handle").value = v;
+      handleOk = false; refresh();
+      clearTimeout(t);
+      if (!/^[a-z0-9_]{3,30}$/.test(v)) { $("handle-msg").textContent = "3–30 letters, numbers or _"; $("handle-msg").style.color = "var(--muted)"; return; }
+      t = setTimeout(async () => {
+        const { data } = await sb.from("profiles").select("id").eq("handle", v).maybeSingle();
+        handleOk = !data || data.id === uid;
+        $("handle-msg").textContent = handleOk ? "✓ Available" : "Already taken";
+        $("handle-msg").style.color = handleOk ? "var(--good)" : "var(--bad)";
+        refresh();
+      }, 350);
+    });
+  }
+
+  // ── file pickers ─────────────────────────────────────────────
+  let img = null;   // { blob, el (HTMLImageElement), w, h }
+  let vid = null;   // { file, w, h }
+
+  function wireDrop(dropId, inputId, onFile) {
+    const drop = $(dropId), input = $(inputId);
+    ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove("over")));
+    drop.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]); });
+    input.addEventListener("change", () => input.files[0] && onFile(input.files[0]));
+  }
+
+  function showPreview(dropId, node, meta) {
+    const drop = $(dropId);
+    drop.classList.add("has-file");
+    drop.querySelector(".empty-state").hidden = true;
+    drop.querySelectorAll(".preview,.file-meta").forEach((n) => n.remove());
+    node.classList.add("preview");
+    const m = document.createElement("div");
+    m.className = "file-meta";
+    m.textContent = meta + " · tap to change";
+    drop.append(node, m);
+  }
+
+  // downscale big photos: faster tracking compile + smaller download for viewers
+  function loadImage(file) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file), im = new Image();
+      im.onload = () => res(im); im.onerror = () => rej(new Error("That image couldn't be read."));
+      im.src = url;
+    });
+  }
+  async function prepareImage(file) {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Please choose a JPG, PNG or WebP image.");
+    if (file.size > C.MAX_IMAGE_MB * 1048576) throw new Error("Image is over " + C.MAX_IMAGE_MB + " MB.");
+    const src = await loadImage(file);
+    const MAX = 1024, s = Math.min(1, MAX / Math.max(src.naturalWidth, src.naturalHeight));
+    const w = Math.round(src.naturalWidth * s), h = Math.round(src.naturalHeight * s);
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(src, 0, 0, w, h);
+    const blob = await new Promise((r) => cv.toBlob(r, "image/jpeg", 0.9));
+    const el = await loadImage(blob);
+    return { blob, el, w, h };
+  }
+
+  wireDrop("drop-img", "file-img", async (file) => {
+    try {
+      img = await prepareImage(file);
+      const p = new Image(); p.src = img.el.src;
+      showPreview("drop-img", p, img.w + "×" + img.h);
+      $("n1").classList.add("done"); $("n1").textContent = "✓";
+      if (!$("title").value) $("title").value = file.name.replace(/\.[^.]+$/, "").slice(0, 80);
+    } catch (e) { App.toast(e.message, true); img = null; }
+    refresh();
+  });
+
+  wireDrop("drop-vid", "file-vid", (file) => {
+    if (!/^video\//.test(file.type)) return App.toast("Please choose a video file.", true);
+    if (file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("Video is over " + C.MAX_VIDEO_MB + " MB. Try a shorter or smaller export.", true);
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.loop = true; v.autoplay = true; v.controls = false;
+    v.setAttribute("playsinline", "");
+    v.onloadedmetadata = () => {
+      vid = { file, w: v.videoWidth || 16, h: v.videoHeight || 9 };
+      showPreview("drop-vid", v, (file.size / 1048576).toFixed(1) + " MB · " + Math.round(v.duration || 0) + "s");
+      $("n2").classList.add("done"); $("n2").textContent = "✓";
+      refresh();
+    };
+    v.onerror = () => App.toast("This browser can't play that video. MP4 (H.264) works everywhere.", true);
+    v.src = URL.createObjectURL(file);
+  });
+
+  $("title").addEventListener("input", refresh);
+  function refresh() { $("publish").disabled = !(img && vid && handleOk && $("title").value.trim()); }
+
+  // ── publish ──────────────────────────────────────────────────
+  function progress(pct, msg) {
+    $("progress-wrap").hidden = false;
+    $("bar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+    if (msg) $("progress-msg").textContent = msg;
+  }
+
+  let Compiler = null;
+  async function getCompiler() {
+    if (!Compiler) {
+      const mod = await import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js");
+      Compiler = mod.Compiler || (window.MINDAR && window.MINDAR.IMAGE.Compiler);
+    }
+    return new Compiler();
+  }
+
+  $("publish").onclick = async () => {
+    const btn = $("publish");
+    btn.disabled = true; btn.textContent = "Publishing…";
+    const uploaded = [];
+    try {
+      // 1. claim the page link
+      if (needHandle) {
+        progress(2, "Saving your page link…");
+        const { error } = await sb.from("profiles").update({ handle: $("handle").value }).eq("id", uid);
+        if (error) throw new Error(error.code === "23505" ? "That page link was just taken — pick another." : error.message);
+      }
+
+      // 2. turn the photo into an AR tracking target (runs in the browser)
+      progress(5, "Analyzing your photo for AR tracking… (this can take 10–40 seconds)");
+      const gl = document.createElement("canvas");
+      if (!(gl.getContext("webgl2") || gl.getContext("webgl"))) {
+        throw new Error("This browser has graphics acceleration (WebGL) turned off, which AR needs. Try Chrome or Safari on a phone or computer.");
+      }
+      const compiler = await getCompiler();
+      await compiler.compileImageTargets([img.el], (p) => progress(5 + p * 0.5, null));
+      const mindBytes = await compiler.exportData();
+      const mindBlob = new Blob([mindBytes], { type: "application/octet-stream" });
+
+      // 3. upload files
+      const folder = uid + "/" + crypto.randomUUID();
+      const ext = (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+      const files = [
+        { path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading photo…", pct: 58 },
+        { path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", pct: 62 },
+        { path: folder + "/video." + ext, body: vid.file, type: vid.file.type || "video/mp4", msg: "Uploading video… (larger videos take longer)", pct: 66 },
+      ];
+      for (const f of files) {
+        progress(f.pct, f.msg);
+        const { error } = await sb.storage.from(App.BUCKET).upload(f.path, f.body, { contentType: f.type, cacheControl: "31536000", upsert: false });
+        if (error) throw error;
+        uploaded.push(f.path);
+      }
+
+      // 4. save the experience
+      progress(95, "Publishing…");
+      const { data: row, error } = await sb.from("experiences").insert({
+        owner: uid,
+        title: $("title").value.trim().slice(0, 80),
+        image_path: files[0].path,
+        mind_path: files[1].path,
+        video_path: files[2].path,
+        image_aspect: img.w / img.h,
+        video_aspect: vid.w / vid.h,
+      }).select("slug").single();
+      if (error) throw error;
+      progress(100, "Done");
+
+      // 5. success screen
+      const link = App.arLink(row.slug);
+      $("creator").hidden = true;
+      $("done").hidden = false;
+      $("done-link").value = link;
+      $("done-view").href = link;
+      $("done-copy").onclick = () => App.copy(link);
+      App.renderQR($("done-qr"), link, 180);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      console.error(e);
+      if (uploaded.length) sb.storage.from(App.BUCKET).remove(uploaded); // tidy up partial uploads
+      const denied = /row-level security|violates|403|Unauthorized/i.test(e.message || "");
+      if (denied) { $("creator").hidden = true; $("paywall").hidden = false; return; }
+      App.toast(e.message || "Something went wrong", true);
+      btn.textContent = "Publish AR experience";
+      refresh();
+    }
+  };
+})();
+</script>
+</body>
+</html>

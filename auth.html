@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · {site}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<style>
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-bottom: 22px; }
+  .tabs button { background: none; border: 0; color: var(--text-2); padding: 10px; border-radius: 9px; cursor: pointer; }
+  .tabs button.on { background: var(--card-2); color: var(--text); }
+</style>
+</head>
+<body>
+<main class="wrap" style="max-width:440px">
+  <div class="card">
+    <h2 id="heading" style="margin-bottom:6px">Create your account</h2>
+    <p class="muted" style="margin-bottom:20px">Your first AR experience is free.</p>
+    <div class="tabs">
+      <button id="tab-up" class="on" type="button">Sign up</button>
+      <button id="tab-in" type="button">Sign in</button>
+    </div>
+    <form id="form" class="stack">
+      <label class="field"><span>Email</span><input class="input" type="email" id="email" required autocomplete="email"></label>
+      <label class="field"><span>Password</span><input class="input" type="password" id="password" required minlength="8" autocomplete="new-password"></label>
+      <button class="btn btn-primary btn-block btn-lg" id="submit" type="submit">Create account</button>
+      <p class="small muted" style="text-align:center"><a href="#" id="forgot" hidden>Forgot password?</a></p>
+    </form>
+  </div>
+</main>
+<script>
+  App.mountHeader();
+  const params = new URLSearchParams(location.search);
+  const next = params.get("next") || "dashboard.html";
+  let mode = params.get("mode") === "in" ? "in" : "up";
+  const $ = (id) => document.getElementById(id);
+
+  function setMode(m) {
+    mode = m;
+    $("tab-up").classList.toggle("on", m === "up");
+    $("tab-in").classList.toggle("on", m === "in");
+    $("heading").textContent = m === "up" ? "Create your account" : "Welcome back";
+    $("submit").textContent = m === "up" ? "Create account" : "Sign in";
+    $("password").autocomplete = m === "up" ? "new-password" : "current-password";
+    $("forgot").hidden = m === "up";
+  }
+  $("tab-up").onclick = () => setMode("up");
+  $("tab-in").onclick = () => setMode("in");
+  setMode(mode);
+
+  App.getSession().then((s) => { if (s) location.replace(next); });
+
+  $("form").onsubmit = async (e) => {
+    e.preventDefault();
+    const email = $("email").value.trim(), password = $("password").value;
+    $("submit").disabled = true;
+    try {
+      if (mode === "up") {
+        const { data, error } = await App.sb.auth.signUp({
+          email, password, options: { emailRedirectTo: App.siteRoot + next },
+        });
+        if (error) throw error;
+        if (!data.session) {
+          App.toast("Check your email to confirm your account.");
+          $("submit").disabled = false;
+          return;
+        }
+      } else {
+        const { error } = await App.sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+      location.replace(next);
+    } catch (err) {
+      App.toast(err.message, true);
+      $("submit").disabled = false;
+    }
+  };
+
+  $("forgot").onclick = async (e) => {
+    e.preventDefault();
+    const email = $("email").value.trim();
+    if (!email) return App.toast("Enter your email first", true);
+    const { error } = await App.sb.auth.resetPasswordForEmail(email, { redirectTo: App.siteRoot + "dashboard.html" });
+    App.toast(error ? error.message : "Password reset email sent", !!error);
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My page · {site}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<style>
+  .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+  .top .card { margin: 0; }
+  @media (max-width: 760px) { .top { grid-template-columns: 1fr; } }
+  .plan-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<main class="wrap wrap-wide">
+  <div class="row" style="margin-bottom:20px">
+    <h1 style="font-size:2rem">My page</h1>
+    <span class="spacer"></span>
+    <a class="btn" id="view-public" target="_blank" hidden>View public page ↗</a>
+  </div>
+
+  <div class="top">
+    <!-- Profile -->
+    <form class="card stack" id="profile-form">
+      <h3>Profile</h3>
+      <label class="field">
+        <span>Page link</span>
+        <div class="input-prefix"><span class="pre" id="handle-pre"></span><input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+      </label>
+      <label class="field"><span>Display name</span><input class="input" id="display_name" maxlength="60" placeholder="Your name or brand"></label>
+      <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="A line about you"></textarea></label>
+      <div class="row">
+        <button class="btn btn-primary" type="submit" id="save">Save profile</button>
+        <button class="btn btn-ghost" type="button" id="share-page" hidden>Share my page</button>
+      </div>
+    </form>
+
+    <!-- Plan -->
+    <div class="card stack">
+      <h3>Plan</h3>
+      <div class="plan-line" id="plan-line"><span class="muted">Loading…</span></div>
+      <p class="muted small" id="plan-note"></p>
+      <button class="btn btn-primary btn-block" id="upgrade" hidden>Upgrade to Pro — <span class="js-price"></span>/<span class="js-period"></span></button>
+      <button class="btn btn-danger btn-block" id="manage" hidden>Cancel subscription</button>
+      <hr style="border:0;border-top:1px solid var(--line)">
+      <div class="row small"><span class="muted" id="email"></span><span class="spacer"></span><a href="#" id="signout">Sign out</a></div>
+    </div>
+  </div>
+
+  <div class="row" style="margin:40px 0 16px">
+    <h2>My AR experiences</h2>
+    <span class="spacer"></span>
+    <a class="btn btn-primary" href="create.html">+ Create</a>
+  </div>
+  <div id="list"><p class="muted">Loading…</p></div>
+</main>
+
+<!-- QR modal -->
+<div class="modal-bg" id="qr-modal">
+  <div class="modal" style="text-align:center">
+    <h3 id="qr-title" style="margin-bottom:16px"></h3>
+    <div class="qr-box" id="qr-target"></div>
+    <p class="small muted" style="margin:14px 0">Print this next to your photo so people can open the AR camera.</p>
+    <div class="row" style="justify-content:center">
+      <a class="btn" id="qr-download" download="ar-qr.png">Download QR</a>
+      <a class="btn" id="qr-photo" target="_blank" download>Target photo</a>
+      <button class="btn btn-ghost" id="qr-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function () {
+  App.mountHeader();
+  const sb = App.sb, $ = (id) => document.getElementById(id), esc = App.esc;
+  document.querySelectorAll(".js-price").forEach((e) => (e.textContent = App.C.PRO_PRICE_LABEL));
+  document.querySelectorAll(".js-period").forEach((e) => (e.textContent = App.C.PRO_PRICE_PERIOD));
+  $("handle-pre").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=";
+
+  // password-reset links land here
+  sb.auth.onAuthStateChange(async (ev) => {
+    if (ev === "PASSWORD_RECOVERY") {
+      const pw = prompt("Choose a new password (8+ characters):");
+      if (pw && pw.length >= 8) {
+        const { error } = await sb.auth.updateUser({ password: pw });
+        App.toast(error ? error.message : "Password updated", !!error);
+      }
+    }
+  });
+
+  const session = await App.requireAuth();
+  const uid = session.user.id;
+  const params = new URLSearchParams(location.search);
+  $("email").textContent = session.user.email;
+  $("signout").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.href = "index.html"; };
+  $("upgrade").onclick = () => App.openUpgrade(loadPlan);
+  $("manage").onclick = async (e) => { if (await App.cancelSubscription(e.currentTarget, currentPlan && currentPlan.period_end)) loadPlan(); };
+
+  // ── profile ────────────────────────────────────────────────
+  let profile = {};
+  async function loadProfile() {
+    const { data } = await sb.from("profiles").select("handle, display_name, bio").eq("id", uid).maybeSingle();
+    profile = data || {};
+    $("handle").value = profile.handle || "";
+    $("display_name").value = profile.display_name || "";
+    $("bio").value = profile.bio || "";
+    const has = !!profile.handle;
+    $("view-public").hidden = !has;
+    $("share-page").hidden = !has;
+    if (has) $("view-public").href = App.profileLink(profile.handle);
+  }
+  $("handle").addEventListener("input", () => { $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, ""); });
+  $("share-page").onclick = () => App.share(profile.display_name || profile.handle, App.profileLink(profile.handle));
+  $("profile-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const handle = $("handle").value.trim();
+    if (handle && !/^[a-z0-9_]{3,30}$/.test(handle)) return App.toast("Page link: 3–30 letters, numbers or _", true);
+    $("save").disabled = true;
+    const { error } = await sb.from("profiles").update({
+      handle: handle || null,
+      display_name: $("display_name").value.trim() || null,
+      bio: $("bio").value.trim() || null,
+    }).eq("id", uid);
+    $("save").disabled = false;
+    if (error) return App.toast(error.code === "23505" ? "That page link is taken" : error.message, true);
+    App.toast("Profile saved");
+    loadProfile();
+  };
+
+  // ── plan ───────────────────────────────────────────────────
+  let currentPlan = null;
+  async function loadPlan() {
+    const p = await App.myPlan();
+    currentPlan = p;
+    const line = $("plan-line"), note = $("plan-note");
+    const date = (d) => new Date(d).toLocaleDateString();
+    if (p.is_pro) {
+      const canceled = p.status === "cancelled";
+      line.innerHTML = '<span class="pill pro">Pro</span>' +
+        (canceled ? '<span class="pill warn">Canceled</span>' : '<span class="muted small">Unlimited experiences · PayPal</span>');
+      note.textContent = canceled
+        ? (p.period_end ? "Pro stays on until " + date(p.period_end) + ". Resubscribe anytime." : "")
+        : (p.period_end ? "Next payment " + date(p.period_end) : "") + (p.payer_email ? " · " + p.payer_email : "");
+      $("upgrade").hidden = !canceled;
+      $("manage").hidden = canceled;
+    } else {
+      line.innerHTML = p.free_used
+        ? '<span class="pill">Free</span><span class="pill warn">Free experience used</span>'
+        : '<span class="pill">Free</span><span class="pill good">1 free experience available</span>';
+      note.textContent = p.free_used
+        ? "Upgrade to keep creating. Everything you've made stays live."
+        : "Your first AR experience is free. After that, Pro is " + App.C.PRO_PRICE_LABEL + "/" + App.C.PRO_PRICE_PERIOD + ".";
+      if (p.status === "suspended") note.textContent = "Your last PayPal payment didn't go through. Update your payment method in PayPal, or subscribe again.";
+      $("upgrade").hidden = false;
+      $("manage").hidden = true;
+    }
+    return p;
+  }
+
+  // ── experiences ────────────────────────────────────────────
+  async function loadList() {
+    const { data, error } = await sb.from("experiences")
+      .select("id, slug, title, image_path, mind_path, video_path, created_at")
+      .eq("owner", uid).order("created_at", { ascending: false });
+    const list = $("list");
+    if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
+    if (!data.length) {
+      list.innerHTML = '<div class="empty"><div style="font-size:2.4rem">🖼️</div><p style="margin:10px 0 16px">No AR experiences yet.</p><a class="btn btn-primary" href="create.html">Create your first — it\'s free</a></div>';
+      return;
+    }
+    list.innerHTML = '<div class="grid">' + data.map((x) =>
+      '<div class="xp" data-id="' + x.id + '">' +
+        '<img class="thumb" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
+        '<div class="body">' +
+          '<div class="title">' + esc(x.title) + "</div>" +
+          '<div class="small muted">' + new Date(x.created_at).toLocaleDateString() + "</div>" +
+          '<div class="actions">' +
+            '<a class="btn btn-sm btn-primary" target="_blank" href="' + esc(App.arLink(x.slug)) + '">View</a>' +
+            '<button class="btn btn-sm" data-act="copy">Link</button>' +
+            '<button class="btn btn-sm" data-act="qr">QR</button>' +
+            '<button class="btn btn-sm btn-danger" data-act="del" aria-label="Delete">✕</button>' +
+          "</div>" +
+        "</div>" +
+      "</div>").join("") + "</div>";
+
+    list.querySelectorAll(".xp").forEach((card) => {
+      const x = data.find((d) => d.id === card.dataset.id);
+      card.querySelector('[data-act="copy"]').onclick = () => App.copy(App.arLink(x.slug));
+      card.querySelector('[data-act="qr"]').onclick = () => openQR(x);
+      card.querySelector('[data-act="del"]').onclick = () => del(x);
+    });
+  }
+
+  async function openQR(x) {
+    $("qr-title").textContent = x.title;
+    $("qr-modal").classList.add("show");
+    await App.renderQR($("qr-target"), App.arLink(x.slug), 220);
+    setTimeout(() => {
+      const c = $("qr-target").querySelector("canvas");
+      if (c) $("qr-download").href = c.toDataURL("image/png");
+    }, 50);
+    $("qr-photo").href = App.publicUrl(x.image_path);
+  }
+  $("qr-close").onclick = () => $("qr-modal").classList.remove("show");
+  $("qr-modal").onclick = (e) => { if (e.target.id === "qr-modal") $("qr-modal").classList.remove("show"); };
+
+  async function del(x) {
+    if (!confirm('Delete "' + x.title + '"? The link and QR code will stop working. This can\'t be undone.')) return;
+    const { error } = await sb.from("experiences").delete().eq("id", x.id);
+    if (error) return App.toast(error.message, true);
+    await sb.storage.from(App.BUCKET).remove([x.image_path, x.mind_path, x.video_path]);
+    App.toast("Deleted");
+    loadList(); loadPlan();
+  }
+
+  await Promise.all([loadProfile(), loadList()]);
+  let plan = await loadPlan().catch((e) => App.toast(e.message, true));
+
+  // "Go Pro" from the pricing page or the paywall
+  if (params.get("upgrade") && plan && !plan.is_pro) {
+    history.replaceState(null, "", "dashboard.html");
+    App.openUpgrade(loadPlan);
+  }
+})();
+</script>
+</body>
+</html>
