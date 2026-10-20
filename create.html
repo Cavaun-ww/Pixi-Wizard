@@ -77,12 +77,10 @@
       </div>
       <div class="stack">
         <label class="field"><span>Title</span><input class="input" id="title" maxlength="80" placeholder="e.g. Summer tour poster"></label>
-        <label class="field" id="handle-field" hidden>
-          <span>Your page name</span>
-          <input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false">
-          <span class="small muted" id="handle-preview" style="display:block;margin-top:6px;overflow-wrap:anywhere"></span>
-          <span class="small" id="handle-msg" style="display:block;margin-top:2px"></span>
-        </label>
+        <div class="field" id="handle-field" hidden>
+          <span>Your page</span>
+          <div class="input" id="handle-box" style="display:flex;align-items:center;gap:8px;overflow-wrap:anywhere;color:var(--text-2)">🔒 <span id="handle-preview"></span></div>
+        </div>
         <button class="btn btn-primary btn-lg btn-block" id="publish">🪄 Make it magic</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
@@ -135,41 +133,12 @@
   $("creator").hidden = false;
   (plan.is_pro ? $("pro-pill") : $("free-pill")).hidden = false;
 
-  // ── page name (handle): suggested automatically, editable ──────
-  const needHandle = !profile || !profile.handle;
-  let handleOk = !needHandle;
-  const handleRe = /^[a-z0-9_]{3,30}$/;
-  function showLinkPreview(v) {
-    $("handle-preview").textContent = "Your page: " + App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + (v || "…");
-  }
-  async function isFree(v) {
-    const { data } = await sb.from("profiles").select("id").eq("handle", v).maybeSingle();
-    return !data || data.id === uid;
-  }
-  async function checkHandle() {
-    const v = $("handle").value;
-    showLinkPreview(v);
-    if (!handleRe.test(v)) { handleOk = false; $("handle-msg").textContent = "3–30 letters, numbers or _"; $("handle-msg").style.color = "var(--muted)"; return; }
-    handleOk = await isFree(v);
-    if ($("handle").value !== v) return; // they kept typing
-    $("handle-msg").textContent = handleOk ? "✓ Available" : "Already taken, try another";
-    $("handle-msg").style.color = handleOk ? "var(--good)" : "var(--bad)";
-  }
-  if (needHandle) {
+  // ── page name: assigned once from the email, can't be changed ──
+  let handle = profile && profile.handle;
+  try { handle = handle || await App.ensureHandle(session); } catch (e) { App.toast(e.message, true); }
+  if (handle) {
+    $("handle-preview").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + handle;
     $("handle-field").hidden = false;
-    // suggest one from their email, e.g. drekray@gmail.com → drekray
-    let base = (session.user.email || "").split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24);
-    if (base.length < 3) base = "wizard";
-    let guess = base;
-    for (let i = 0; i < 5 && !(await isFree(guess).catch(() => true)); i++) guess = base + Math.floor(10 + Math.random() * 990);
-    $("handle").value = guess;
-    checkHandle();
-    let t;
-    $("handle").addEventListener("input", () => {
-      $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, "");
-      handleOk = false; showLinkPreview($("handle").value);
-      clearTimeout(t); t = setTimeout(checkHandle, 350);
-    });
   }
 
   // ── file pickers ─────────────────────────────────────────────
@@ -253,7 +222,7 @@
     if (!img) return ["Add your photo first (step 1).", "drop-img"];
     if (!vid) return ["Add your video (step 2).", "drop-vid"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
-    if (needHandle && !handleOk) return ["Pick an available page name.", "handle"];
+    if (!handle) return ["Your page name isn't ready yet. Refresh the page and try again.", "title"];
     return null;
   }
 
@@ -285,13 +254,6 @@
     busy = true; btn.disabled = true; btn.textContent = "Casting the spell…";
     const uploaded = [];
     try {
-      // 1. claim the page link
-      if (needHandle) {
-        progress(2, "Saving your page link…");
-        const { error } = await sb.from("profiles").update({ handle: $("handle").value }).eq("id", uid);
-        if (error) throw new Error(error.code === "23505" ? "That page link was just taken — pick another." : error.message);
-      }
-
       // 2. turn the photo into an AR tracking target (runs in the browser)
       progress(5, "Teaching the camera to recognize your photo… (10–40 seconds)");
       const gl = document.createElement("canvas");

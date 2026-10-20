@@ -34,8 +34,8 @@
       <h3>Profile</h3>
       <label class="field">
         <span>Page name</span>
-        <input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false">
-        <span class="small muted" id="handle-preview" style="display:block;margin-top:6px;overflow-wrap:anywhere"></span>
+        <div class="input" style="display:flex;align-items:center;gap:8px;overflow-wrap:anywhere;color:var(--text-2)">🔒 <span id="handle-preview"></span></div>
+        <span class="small muted" style="display:block;margin-top:6px">Your page name is permanent so your links and QR codes always keep working.</span>
       </label>
       <label class="field"><span>Display name</span><input class="input" id="display_name" maxlength="60" placeholder="Your name or brand"></label>
       <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="A line about you"></textarea></label>
@@ -85,7 +85,7 @@
   const sb = App.sb, $ = (id) => document.getElementById(id), esc = App.esc;
   document.querySelectorAll(".js-price").forEach((e) => (e.textContent = App.C.PRO_PRICE_LABEL));
   document.querySelectorAll(".js-period").forEach((e) => (e.textContent = App.C.PRO_PRICE_PERIOD));
-  const linkPreview = () => ($("handle-preview").textContent = "Your page: " + App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + ($("handle").value || "…"));
+  const linkPreview = () => ($("handle-preview").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + (profile.handle || "…"));
 
   // password-reset links land here
   sb.auth.onAuthStateChange(async (ev) => {
@@ -109,9 +109,9 @@
   // ── profile ────────────────────────────────────────────────
   let profile = {};
   async function loadProfile() {
+    try { await App.ensureHandle(session); } catch (e) { /* shown as "…" until next visit */ }
     const { data } = await sb.from("profiles").select("handle, display_name, bio").eq("id", uid).maybeSingle();
     profile = data || {};
-    $("handle").value = profile.handle || "";
     linkPreview();
     $("display_name").value = profile.display_name || "";
     $("bio").value = profile.bio || "";
@@ -120,20 +120,16 @@
     $("share-page").hidden = !has;
     if (has) $("view-public").href = App.profileLink(profile.handle);
   }
-  $("handle").addEventListener("input", () => { $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, ""); linkPreview(); });
   $("share-page").onclick = () => App.share(profile.display_name || profile.handle, App.profileLink(profile.handle));
   $("profile-form").onsubmit = async (e) => {
     e.preventDefault();
-    const handle = $("handle").value.trim();
-    if (handle && !/^[a-z0-9_]{3,30}$/.test(handle)) return App.toast("Page link: 3–30 letters, numbers or _", true);
     $("save").disabled = true;
     const { error } = await sb.from("profiles").update({
-      handle: handle || null,
       display_name: $("display_name").value.trim() || null,
       bio: $("bio").value.trim() || null,
     }).eq("id", uid);
     $("save").disabled = false;
-    if (error) return App.toast(error.code === "23505" ? "That page link is taken" : error.message, true);
+    if (error) return App.toast(error.message, true);
     App.toast("Profile saved");
     loadProfile();
   };

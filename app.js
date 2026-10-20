@@ -216,6 +216,29 @@
     }
   }
 
+  // Give the account its permanent page name (handle) the first time it's needed.
+  // Built from the email (drekray@gmail.com → "drekray"); a number is added if taken.
+  // Once set it can never be changed (the database enforces this).
+  async function ensureHandle(session) {
+    const uid = session.user.id;
+    const { data: prof } = await sb.from("profiles").select("handle").eq("id", uid).maybeSingle();
+    if (prof && prof.handle) return prof.handle;
+    let base = (session.user.email || "").split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24);
+    if (base.length < 3) base = (base + "wizard").slice(0, 24);
+    for (let i = 0; i < 8; i++) {
+      const guess = i === 0 ? base : base + Math.floor(10 + Math.random() * (i < 4 ? 990 : 99990));
+      const { data, error } = await sb.from("profiles").update({ handle: guess })
+        .eq("id", uid).is("handle", null).select("handle").maybeSingle();
+      if (!error && data) return data.handle;
+      if (error && error.code !== "23505") throw error; // 23505 = name taken, try another
+      if (!error && !data) {                             // someone (another tab) already set it
+        const again = await sb.from("profiles").select("handle").eq("id", uid).maybeSingle();
+        if (again.data && again.data.handle) return again.data.handle;
+      }
+    }
+    throw new Error("Couldn't create your page name. Please try again.");
+  }
+
   // a little celebration
   function confetti(n) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -236,6 +259,6 @@
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
     getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
-    renderQR, copy, share, mountHeader, confetti,
+    renderQR, copy, share, mountHeader, confetti, ensureHandle,
   };
 })();
