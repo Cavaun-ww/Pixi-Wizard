@@ -33,8 +33,9 @@
     <form class="card stack" id="profile-form">
       <h3>Profile</h3>
       <label class="field">
-        <span>Page link</span>
-        <div class="input-prefix"><span class="pre" id="handle-pre"></span><input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+        <span>Page name</span>
+        <input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false">
+        <span class="small muted" id="handle-preview" style="display:block;margin-top:6px;overflow-wrap:anywhere"></span>
       </label>
       <label class="field"><span>Display name</span><input class="input" id="display_name" maxlength="60" placeholder="Your name or brand"></label>
       <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="A line about you"></textarea></label>
@@ -84,7 +85,7 @@
   const sb = App.sb, $ = (id) => document.getElementById(id), esc = App.esc;
   document.querySelectorAll(".js-price").forEach((e) => (e.textContent = App.C.PRO_PRICE_LABEL));
   document.querySelectorAll(".js-period").forEach((e) => (e.textContent = App.C.PRO_PRICE_PERIOD));
-  $("handle-pre").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=";
+  const linkPreview = () => ($("handle-preview").textContent = "Your page: " + App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + ($("handle").value || "…"));
 
   // password-reset links land here
   sb.auth.onAuthStateChange(async (ev) => {
@@ -111,6 +112,7 @@
     const { data } = await sb.from("profiles").select("handle, display_name, bio").eq("id", uid).maybeSingle();
     profile = data || {};
     $("handle").value = profile.handle || "";
+    linkPreview();
     $("display_name").value = profile.display_name || "";
     $("bio").value = profile.bio || "";
     const has = !!profile.handle;
@@ -118,7 +120,7 @@
     $("share-page").hidden = !has;
     if (has) $("view-public").href = App.profileLink(profile.handle);
   }
-  $("handle").addEventListener("input", () => { $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, ""); });
+  $("handle").addEventListener("input", () => { $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, ""); linkPreview(); });
   $("share-page").onclick = () => App.share(profile.display_name || profile.handle, App.profileLink(profile.handle));
   $("profile-form").onsubmit = async (e) => {
     e.preventDefault();

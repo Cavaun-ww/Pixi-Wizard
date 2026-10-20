@@ -78,11 +78,12 @@
       <div class="stack">
         <label class="field"><span>Title</span><input class="input" id="title" maxlength="80" placeholder="e.g. Summer tour poster"></label>
         <label class="field" id="handle-field" hidden>
-          <span>Choose your page link</span>
-          <div class="input-prefix"><span class="pre" id="handle-pre"></span><input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
-          <span class="small" id="handle-msg" style="margin-top:6px"></span>
+          <span>Your page name</span>
+          <input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false">
+          <span class="small muted" id="handle-preview" style="display:block;margin-top:6px;overflow-wrap:anywhere"></span>
+          <span class="small" id="handle-msg" style="display:block;margin-top:2px"></span>
         </label>
-        <button class="btn btn-primary btn-lg btn-block" id="publish" disabled>🪄 Make it magic</button>
+        <button class="btn btn-primary btn-lg btn-block" id="publish">🪄 Make it magic</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
           <p class="small muted" id="progress-msg" style="margin-top:8px"></p>
@@ -134,26 +135,40 @@
   $("creator").hidden = false;
   (plan.is_pro ? $("pro-pill") : $("free-pill")).hidden = false;
 
-  // ── handle (page link) if they don't have one yet ─────────────
+  // ── page name (handle): suggested automatically, editable ──────
   const needHandle = !profile || !profile.handle;
   let handleOk = !needHandle;
+  const handleRe = /^[a-z0-9_]{3,30}$/;
+  function showLinkPreview(v) {
+    $("handle-preview").textContent = "Your page: " + App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + (v || "…");
+  }
+  async function isFree(v) {
+    const { data } = await sb.from("profiles").select("id").eq("handle", v).maybeSingle();
+    return !data || data.id === uid;
+  }
+  async function checkHandle() {
+    const v = $("handle").value;
+    showLinkPreview(v);
+    if (!handleRe.test(v)) { handleOk = false; $("handle-msg").textContent = "3–30 letters, numbers or _"; $("handle-msg").style.color = "var(--muted)"; return; }
+    handleOk = await isFree(v);
+    if ($("handle").value !== v) return; // they kept typing
+    $("handle-msg").textContent = handleOk ? "✓ Available" : "Already taken, try another";
+    $("handle-msg").style.color = handleOk ? "var(--good)" : "var(--bad)";
+  }
   if (needHandle) {
     $("handle-field").hidden = false;
-    $("handle-pre").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=";
+    // suggest one from their email, e.g. drekray@gmail.com → drekray
+    let base = (session.user.email || "").split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24);
+    if (base.length < 3) base = "wizard";
+    let guess = base;
+    for (let i = 0; i < 5 && !(await isFree(guess).catch(() => true)); i++) guess = base + Math.floor(10 + Math.random() * 990);
+    $("handle").value = guess;
+    checkHandle();
     let t;
     $("handle").addEventListener("input", () => {
-      const v = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, "");
-      $("handle").value = v;
-      handleOk = false; refresh();
-      clearTimeout(t);
-      if (!/^[a-z0-9_]{3,30}$/.test(v)) { $("handle-msg").textContent = "3–30 letters, numbers or _"; $("handle-msg").style.color = "var(--muted)"; return; }
-      t = setTimeout(async () => {
-        const { data } = await sb.from("profiles").select("id").eq("handle", v).maybeSingle();
-        handleOk = !data || data.id === uid;
-        $("handle-msg").textContent = handleOk ? "✓ Available" : "Already taken";
-        $("handle-msg").style.color = handleOk ? "var(--good)" : "var(--bad)";
-        refresh();
-      }, 350);
+      $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+      handleOk = false; showLinkPreview($("handle").value);
+      clearTimeout(t); t = setTimeout(checkHandle, 350);
     });
   }
 
@@ -232,7 +247,15 @@
   });
 
   $("title").addEventListener("input", refresh);
-  function refresh() { $("publish").disabled = !(img && vid && handleOk && $("title").value.trim()); }
+  let busy = false;
+  function refresh() { $("publish").disabled = busy; }
+  function missing() {
+    if (!img) return ["Add your photo first (step 1).", "drop-img"];
+    if (!vid) return ["Add your video (step 2).", "drop-vid"];
+    if (!$("title").value.trim()) return ["Give it a title.", "title"];
+    if (needHandle && !handleOk) return ["Pick an available page name.", "handle"];
+    return null;
+  }
 
   // ── publish ──────────────────────────────────────────────────
   function progress(pct, msg) {
@@ -252,7 +275,14 @@
 
   $("publish").onclick = async () => {
     const btn = $("publish");
-    btn.disabled = true; btn.textContent = "Casting the spell…";
+    const m = missing();
+    if (m) {
+      App.toast(m[0], true);
+      const el = $(m[1]); el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el.focus && el.tagName === "INPUT") setTimeout(() => el.focus(), 400);
+      return;
+    }
+    busy = true; btn.disabled = true; btn.textContent = "Casting the spell…";
     const uploaded = [];
     try {
       // 1. claim the page link
@@ -302,16 +332,11 @@
       if (error) throw error;
       progress(100, "Done");
 
-      // 5. success screen
-      const link = App.arLink(row.slug);
-      $("creator").hidden = true;
-      $("done").hidden = false;
-      $("done-link").value = link;
-      $("done-view").href = link;
-      $("done-copy").onclick = () => App.copy(link);
-      App.renderQR($("done-qr"), link, 180);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // 5. straight into the AR camera
+      progress(100, "✨ Opening your camera…");
+      btn.textContent = "✨ Opening your camera…";
       App.confetti();
+      setTimeout(() => location.replace("ar.html?x=" + encodeURIComponent(row.slug) + "&new=1"), 1300);
     } catch (e) {
       console.error(e);
       if (uploaded.length) sb.storage.from(App.BUCKET).remove(uploaded); // tidy up partial uploads
@@ -319,7 +344,7 @@
       if (denied) { $("creator").hidden = true; $("paywall").hidden = false; return; }
       App.toast(e.message || "Something went wrong", true);
       btn.textContent = "🪄 Make it magic";
-      refresh();
+      busy = false; refresh();
     }
   };
 })();

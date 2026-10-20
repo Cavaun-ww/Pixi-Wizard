@@ -49,6 +49,10 @@ h1 { font-family:"Fredoka",sans-serif; font-size:1.7rem; font-weight:500; line-h
 #start-btn:disabled { background:#241a40; box-shadow:none; color:var(--muted); cursor:default; }
 #status-line { font-size:0.8rem; color:var(--muted); margin-top:10px; min-height:1.2em; }
 #status-line.err { color:var(--bad); }
+.after { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px; width:100%; }
+.after button, .after a { padding:10px 18px; border-radius:999px; border:1px solid #3d2f66; background:#1d1538; color:var(--text); font:inherit; font-size:0.92rem; cursor:pointer; text-decoration:none; }
+.after button:hover, .after a:hover { border-color:var(--accent); }
+.new-banner { width:100%; margin-bottom:14px; padding:10px 14px; border-radius:14px; background:linear-gradient(120deg,rgba(255,95,210,.18),rgba(168,85,247,.25)); border:1px solid #3d2f66; font-size:0.9rem; }
 .desk { margin-top:20px; width:100%; display:none; flex-direction:column; align-items:center; gap:12px; padding:22px 20px; border-radius:22px;
   background:#150f2a; border:1px solid #3d2f66; box-shadow:0 20px 50px -20px rgba(168,85,247,.55); }
 .desk.show { display:flex; }
@@ -95,8 +99,13 @@ body.desktop #target-img { max-height:26vh; }
       <div class="step"><span class="n">2</span><span>Point your phone at <b>the image above</b></span></div>
       <div class="step"><span class="n">3</span><span>✨ The <b>video</b> plays right on top of it</span></div>
     </div>
+    <div class="new-banner" id="new-banner" hidden>🎉 Abracadabra, it's live! Point your camera at your photo to see it.</div>
     <button id="start-btn" disabled>Loading…</button>
     <div id="status-line"></div>
+    <div class="after">
+      <button id="share-btn" type="button">🔗 Share this AR</button>
+      <a id="mypage-link" href="dashboard.html" hidden>My page</a>
+    </div>
     <div class="desk" id="desk">
       <h2>📱 Open this on your phone</h2>
       <p>AR uses your phone's camera, so it only works on a phone or tablet. Point your phone's camera at this code to open it there:</p>
@@ -117,7 +126,9 @@ body.desktop #target-img { max-height:26vh; }
   var C = window.APP_CONFIG;
   var sb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, { auth: { persistSession: false } });
   var $ = function (id) { return document.getElementById(id); };
-  var slug = new URLSearchParams(location.search).get("x") || "";
+  var qs = new URLSearchParams(location.search);
+  var slug = qs.get("x") || "";
+  var isNew = qs.get("new") === "1";
   var xp = null, arVid = null;
 
   $("site-name").textContent = C.SITE_NAME;
@@ -166,6 +177,12 @@ body.desktop #target-img { max-height:26vh; }
     $("target-img").hidden = false;
     $("start-btn").textContent = "🪄 Start AR camera";
     $("start-btn").disabled = !isMobile; // AR is phone/tablet only
+    if (isNew) {
+      $("new-banner").hidden = false;
+      $("mypage-link").hidden = false;
+      history.replaceState(null, "", "ar.html?x=" + encodeURIComponent(slug)); // share link without "new"
+      if (isMobile) setTimeout(function () { $("start-btn").click(); }, 300);
+    }
   })();
 
   // ── video overlay component: plane sized to the photo, video cropped to cover it ──
@@ -214,6 +231,15 @@ body.desktop #target-img { max-height:26vh; }
       remove: function () { this.el.removeObject3D("vid"); },
     });
   }
+
+  $("share-btn").onclick = function () {
+    var url = location.origin + location.pathname + "?x=" + encodeURIComponent(slug);
+    var title = xp ? xp.title : document.title;
+    if (navigator.share) { navigator.share({ title: title, url: url }).catch(function () {}); return; }
+    var done = function () { $("share-btn").textContent = "✓ Link copied"; };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("Copy this link:", url); });
+    else prompt("Copy this link:", url);
+  };
 
   $("unmute").onclick = function () {
     if (!arVid) return;
