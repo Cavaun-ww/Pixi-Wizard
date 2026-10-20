@@ -13,6 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="config.js"></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -83,6 +84,9 @@ body.desktop #target-img { max-height:26vh; }
 }
 #scan-hint { bottom:28px; }
 #unmute { bottom:84px; cursor:pointer; }
+#now-playing { top:18px; max-width:calc(100vw - 96px); overflow:hidden; text-overflow:ellipsis; left:16px; transform:none; }
+.collage { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; margin-bottom:16px; }
+.collage img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px; border:1px solid var(--line); background:#000; }
 .pill-float.show { display:block; }
 </style>
 </head>
@@ -92,11 +96,12 @@ body.desktop #target-img { max-height:26vh; }
   <div class="inner">
     <a class="brand" href="index.html"><img src="logo-mark.png" alt=""><span id="site-name"></span></a>
     <img id="target-img" alt="" hidden>
+    <div class="collage" id="collage" hidden></div>
     <h1 id="title">Loading…</h1>
     <div class="by" id="by"></div>
     <div class="steps">
       <div class="step"><span class="n">1</span><span>Tap <b>Start AR camera</b> and allow camera access</span></div>
-      <div class="step"><span class="n">2</span><span>Point your phone at <b>the image above</b></span></div>
+      <div class="step"><span class="n">2</span><span id="step2">Point your phone at <b>the image above</b></span></div>
       <div class="step"><span class="n">3</span><span>✨ The <b>video</b> plays right on top of it</span></div>
     </div>
     <div class="new-banner" id="new-banner" hidden>🎉 Abracadabra, it's live! Point your camera at your photo to see it.</div>
@@ -111,7 +116,7 @@ body.desktop #target-img { max-height:26vh; }
       <p>AR uses your phone's camera, so it only works on a phone or tablet. Point your phone's camera at this code to open it there:</p>
       <div id="qr-target"></div>
       <button id="copy-link" type="button">Copy link instead</button>
-      <p class="tip">✨ Tip: once it's open on your phone, point it at the photo above, right here on your screen.</p>
+      <p class="tip" id="desk-tip">✨ Tip: once it's open on your phone, point it at the photo above, right here on your screen.</p>
     </div>
     <div class="foot">Content is user-generated. <a href="create.html">Make your own with <span class="js-name"></span></a></div>
   </div>
@@ -120,6 +125,7 @@ body.desktop #target-img { max-height:26vh; }
 <button id="ar-close" aria-label="Close camera">✕</button>
 <div class="pill-float" id="scan-hint">Point at the image</div>
 <button class="pill-float" id="unmute">🔇 Tap for sound</button>
+<div class="pill-float" id="now-playing"></div>
 
 <script>
 (function () {
@@ -128,13 +134,22 @@ body.desktop #target-img { max-height:26vh; }
   var $ = function (id) { return document.getElementById(id); };
   var qs = new URLSearchParams(location.search);
   var slug = qs.get("x") || "";
+  var isExplore = qs.get("explore") === "1";
   var isNew = qs.get("new") === "1";
-  var xp = null, arVid = null;
+  var autoGo = isNew || qs.get("go") === "1";
+  var EXPLORE_LIMIT = C.EXPLORE_LIMIT || 40;
+
+  var xps = [];          // experiences the camera can recognise (index = target index)
+  var mindSrc = null;    // single .mind URL, or a merged one for Explore
+  var videos = [];       // one <video> per target, created when needed
+  var currentIdx = -1;   // which target is on screen
 
   $("site-name").textContent = C.SITE_NAME;
   document.querySelectorAll(".js-name").forEach(function (e) { e.textContent = C.SITE_NAME; });
   function setStatus(msg, cls) { var el = $("status-line"); el.textContent = msg; el.className = cls || ""; }
   function pub(path) { return sb.storage.from("ar").getPublicUrl(path).data.publicUrl; }
+  function shareUrl() { return location.origin + location.pathname + (isExplore ? "?explore=1" : "?x=" + encodeURIComponent(slug)); }
+  function byName(x) { var p = x.profiles; return p ? (p.display_name || (p.handle ? "@" + p.handle : "")) : ""; }
 
   // QR for desktop visitors
   var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
@@ -142,55 +157,121 @@ body.desktop #target-img { max-height:26vh; }
     document.body.classList.add("desktop");
     $("desk").classList.add("show");
     $("copy-link").onclick = function () {
+      var url = shareUrl();
       var done = function () { $("copy-link").textContent = "✓ Link copied"; };
-      if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, function () { prompt("Copy this link:", location.href); });
-      else prompt("Copy this link:", location.href);
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("Copy this link:", url); });
+      else prompt("Copy this link:", url);
     };
     var s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
-    s.onload = function () { new QRCode($("qr-target"), { text: location.href, width: 170, height: 170, colorDark: "#000", colorLight: "#fff", correctLevel: QRCode.CorrectLevel.M }); };
+    s.onload = function () { new QRCode($("qr-target"), { text: shareUrl(), width: 170, height: 170, colorDark: "#000", colorLight: "#fff", correctLevel: QRCode.CorrectLevel.M }); };
     document.head.appendChild(s);
   }
 
-  // ── load the experience ─────────────────────────────────────
+  // Combine many one-photo .mind files into one file MindAR can scan for all at once
+  async function mergeMinds(list) {
+    var bufs = await Promise.all(list.map(function (x) {
+      return fetch(pub(x.mind_path)).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).catch(function () { return null; });
+    }));
+    var version = null, dataList = [], kept = [];
+    bufs.forEach(function (b, i) {
+      if (!b) return;
+      try {
+        var d = MessagePack.decode(new Uint8Array(b));
+        if (!d || !d.dataList) return;
+        if (version === null) version = d.v;
+        if (d.v !== version) return;
+        d.dataList.forEach(function (t) { dataList.push(t); kept.push(list[i]); });
+      } catch (e) { /* skip a broken file */ }
+    });
+    if (!dataList.length) return null;
+    var bytes = MessagePack.encode({ v: version, dataList: dataList });
+    return { xps: kept, url: URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" })) };
+  }
+
+  function ready() {
+    $("start-btn").textContent = "🪄 Start AR camera";
+    $("start-btn").disabled = !isMobile; // AR is phone/tablet only
+    if (autoGo && isMobile) setTimeout(function () { $("start-btn").click(); }, 300);
+  }
+
+  // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
+    var cols = "slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, profiles(handle, display_name)";
+
+    if (isExplore) {
+      document.title = "Explore · " + C.SITE_NAME;
+      $("title").textContent = "🔮 Explore";
+      $("step2").innerHTML = "Point your phone at <b>any photo</b> from Explore";
+      $("desk-tip").textContent = "✨ Tip: open Explore on your phone, then point it at any photo on this screen.";
+      $("share-btn").textContent = "🔗 Share Explore";
+      $("by").innerHTML = 'Loading the community… <a href="explore.html">see all</a>';
+      var r = await sb.from("experiences").select(cols).order("created_at", { ascending: false }).limit(EXPLORE_LIMIT);
+      var list = (r.data || []);
+      if (!list.length) { $("by").textContent = "No AR experiences yet. Be the first!"; $("start-btn").textContent = "Nothing to scan yet"; return; }
+      $("collage").innerHTML = list.slice(0, 9).map(function (x) { return '<img alt="" loading="lazy" src="' + pub(x.image_path) + '">'; }).join("");
+      $("collage").hidden = false;
+      if (!isMobile) { $("by").innerHTML = list.length + ' photos from the community · <a href="explore.html">see all</a>'; $("start-btn").textContent = "🪄 Start AR camera"; return; }
+      setStatus("Getting the magic ready…");
+      var merged = await mergeMinds(list);
+      if (!merged) { setStatus("Couldn't load the photos. Try refreshing.", "err"); return; }
+      xps = merged.xps; mindSrc = merged.url;
+      $("by").innerHTML = xps.length + ' photos from the community · <a href="explore.html">see all</a>';
+      setStatus("");
+      ready();
+      return;
+    }
+
     if (!slug) { $("title").textContent = "AR experience not found"; return; }
-    var res = await sb.from("experiences")
-      .select("slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, profiles(handle, display_name)")
-      .eq("slug", slug).maybeSingle();
+    var res = await sb.from("experiences").select(cols).eq("slug", slug).maybeSingle();
     if (res.error || !res.data) {
       $("title").textContent = "AR experience not found";
       $("by").textContent = "This link may have been removed.";
       $("start-btn").textContent = "Unavailable";
       return;
     }
-    xp = res.data;
+    xps = [res.data]; mindSrc = pub(res.data.mind_path);
+    var xp = res.data;
     document.title = xp.title + " · " + C.SITE_NAME;
     $("title").textContent = xp.title;
     var p = xp.profiles;
     if (p && p.handle) {
       $("by").innerHTML = 'by <a href="u.html?h=' + encodeURIComponent(p.handle) + '"></a>';
-      $("by").querySelector("a").textContent = p.display_name || "@" + p.handle;
+      $("by").querySelector("a").textContent = byName(xp);
     }
     $("target-img").src = pub(xp.image_path);
     $("target-img").hidden = false;
-    $("start-btn").textContent = "🪄 Start AR camera";
-    $("start-btn").disabled = !isMobile; // AR is phone/tablet only
     if (isNew) {
       $("new-banner").hidden = false;
       $("mypage-link").hidden = false;
       history.replaceState(null, "", "ar.html?x=" + encodeURIComponent(slug)); // share link without "new"
-      if (isMobile) setTimeout(function () { $("start-btn").click(); }, 300);
     }
+    ready();
   })();
 
-  // ── video overlay component: plane sized to the photo, video cropped to cover it ──
+  function makeVideo(i) {
+    if (videos[i]) return videos[i];
+    var v = document.createElement("video");
+    v.src = pub(xps[i].video_path);
+    v.crossOrigin = "anonymous";
+    v.loop = true; v.muted = false; v.volume = 1; v.playsInline = true;
+    v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
+    v.preload = xps.length > 1 ? "none" : "auto"; // Explore: only download a video once its photo is found
+    v.style.cssText = "position:fixed;bottom:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(v);
+    videos[i] = v;
+    return v;
+  }
+
+  // ── video overlay: plane sized to the photo, video cropped to cover it ──
   if (typeof AFRAME !== "undefined") {
     AFRAME.registerComponent("video-overlay", {
+      schema: { idx: { type: "int", default: 0 } },
       init: function () {
-        var video = arVid;
-        if (!video) return;
+        var idx = this.data.idx, xp = xps[idx];
+        if (!xp) return;
+        var video = makeVideo(idx);
         var imgA = xp.image_aspect || 1, vidA = xp.video_aspect || 16 / 9;
         var texture = new THREE.VideoTexture(video);
         texture.minFilter = THREE.LinearFilter;
@@ -199,16 +280,20 @@ body.desktop #target-img { max-height:26vh; }
         else { texture.repeat.y = vidA / imgA; texture.offset.y = (1 - texture.repeat.y) / 2; }
         var geo = new THREE.PlaneGeometry(1, 1 / imgA);
         var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0 });
-        var mesh = new THREE.Mesh(geo, mat);
-        this.el.setObject3D("vid", mesh);
+        this.el.setObject3D("vid", new THREE.Mesh(geo, mat));
         this.mat = mat;
         this.visible = false;
 
         var self = this, targetEl = this.el.parentNode;
         targetEl.addEventListener("targetFound", function () {
           self.visible = true;
+          currentIdx = idx;
           video._wanted = true;
           $("scan-hint").classList.remove("show");
+          if (isExplore) {
+            $("now-playing").textContent = "✨ " + xp.title + (byName(xp) ? " · " + byName(xp) : "");
+            $("now-playing").classList.add("show");
+          }
           video.play().catch(function () {
             // sound blocked by the browser → play muted and offer a tap-for-sound button
             video.muted = true;
@@ -220,21 +305,21 @@ body.desktop #target-img { max-height:26vh; }
           self.visible = false;
           video._wanted = false;
           video.pause();
+          if (currentIdx === idx) { $("now-playing").classList.remove("show"); }
           $("scan-hint").classList.add("show");
         });
       },
       tick: function () {
         if (!this.mat) return;
-        var target = this.visible ? 1 : 0;
-        this.mat.opacity += (target - this.mat.opacity) * 0.2; // quick fade in/out
+        this.mat.opacity += ((this.visible ? 1 : 0) - this.mat.opacity) * 0.2; // quick fade in/out
       },
       remove: function () { this.el.removeObject3D("vid"); },
     });
   }
 
   $("share-btn").onclick = function () {
-    var url = location.origin + location.pathname + "?x=" + encodeURIComponent(slug);
-    var title = xp ? xp.title : document.title;
+    var url = shareUrl();
+    var title = isExplore ? "Explore · " + C.SITE_NAME : (xps[0] ? xps[0].title : document.title);
     if (navigator.share) { navigator.share({ title: title, url: url }).catch(function () {}); return; }
     var done = function () { $("share-btn").textContent = "✓ Link copied"; };
     if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt("Copy this link:", url); });
@@ -242,31 +327,28 @@ body.desktop #target-img { max-height:26vh; }
   };
 
   $("unmute").onclick = function () {
-    if (!arVid) return;
-    arVid.muted = false; arVid.volume = 1;
-    arVid.play().catch(function () {});
+    var v = videos[currentIdx];
+    if (!v) return;
+    v.muted = false; v.volume = 1;
+    v.play().catch(function () {});
+    videos.forEach(function (o) { if (o) o.muted = false; }); // the rest play with sound too
     $("unmute").classList.remove("show");
   };
 
   // ── start / stop ────────────────────────────────────────────
   $("start-btn").onclick = function startAR() {
-    if (!xp || !isMobile) return;
+    if (!xps.length || !mindSrc || !isMobile) return;
     $("splash").style.display = "none";
     $("ar-close").classList.add("show");
+    $("scan-hint").textContent = isExplore ? "Point at any photo from Explore" : "Point at the image";
     $("scan-hint").classList.add("show");
 
-    // overlay video (hidden off-screen — used as the AR texture)
-    arVid = document.createElement("video");
-    arVid.src = pub(xp.video_path);
-    arVid.crossOrigin = "anonymous";
-    arVid.loop = true; arVid.muted = false; arVid.volume = 1; arVid.playsInline = true;
-    arVid.setAttribute("playsinline", ""); arVid.setAttribute("webkit-playsinline", "");
-    arVid.preload = "auto";
-    arVid.style.cssText = "position:fixed;bottom:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
-    document.body.appendChild(arVid);
-    // "unlock" playback with sound while we're still inside the tap (needed on iPhone)
-    var unlock = arVid.play();
-    if (unlock && unlock.then) unlock.then(function () { if (arVid && !arVid._wanted) { arVid.pause(); arVid.currentTime = 0; } }).catch(function () {});
+    if (xps.length === 1) {
+      // "unlock" playback with sound while we're still inside the tap (needed on iPhone)
+      var v0 = makeVideo(0);
+      var unlock = v0.play();
+      if (unlock && unlock.then) unlock.then(function () { if (!v0._wanted) { v0.pause(); v0.currentTime = 0; } }).catch(function () {});
+    }
 
     // the moment MindAR injects its camera <video>, bring it forward so it's visible
     var camObserver = new MutationObserver(function (mutations) {
@@ -274,7 +356,7 @@ body.desktop #target-img { max-height:26vh; }
         var nodes = mutations[i].addedNodes;
         for (var j = 0; j < nodes.length; j++) {
           var n = nodes[j];
-          if (n.nodeType === 1 && n.tagName === "VIDEO" && n !== arVid) {
+          if (n.nodeType === 1 && n.tagName === "VIDEO" && videos.indexOf(n) === -1) {
             [["position","fixed"],["top","0"],["left","0"],["width","100vw"],["height","100vh"],["object-fit","cover"],["z-index","1"],["display","block"],["background","#000"]]
               .forEach(function (kv) { n.style.setProperty(kv[0], kv[1], "important"); });
             camObserver.disconnect();
@@ -286,8 +368,8 @@ body.desktop #target-img { max-height:26vh; }
 
     var scene = document.createElement("a-scene");
     scene.setAttribute("mindar-image",
-      "imageTargetSrc: " + pub(xp.mind_path) +
-      "; uiLoading: no; uiScanning: no; uiError: no" +
+      "imageTargetSrc: " + mindSrc +
+      "; maxTrack: 1; uiLoading: no; uiScanning: no; uiError: no" +
       "; filterMinCF: 0.001; filterBeta: 0.001; warmupTolerance: 5; missTolerance: 5");
     scene.setAttribute("vr-mode-ui", "enabled: false");
     scene.setAttribute("device-orientation-permission-ui", "enabled: false");
@@ -300,15 +382,21 @@ body.desktop #target-img { max-height:26vh; }
     cam.setAttribute("look-controls", "enabled: false");
     scene.appendChild(cam);
 
-    var t0 = document.createElement("a-entity");
-    t0.setAttribute("mindar-image-target", "targetIndex: 0");
-    var ov = document.createElement("a-entity");
-    ov.id = "overlay0";
-    ov.setAttribute("position", "0 0 0.01");
-    t0.appendChild(ov);
-    scene.appendChild(t0);
+    var overlays = [];
+    xps.forEach(function (x, i) {
+      var t = document.createElement("a-entity");
+      t.setAttribute("mindar-image-target", "targetIndex: " + i);
+      var ov = document.createElement("a-entity");
+      ov.id = "overlay" + i;
+      ov.setAttribute("position", "0 0 0.01");
+      t.appendChild(ov);
+      scene.appendChild(t);
+      overlays.push(ov);
+    });
 
-    scene.addEventListener("loaded", function () { ov.setAttribute("video-overlay", ""); });
+    scene.addEventListener("loaded", function () {
+      overlays.forEach(function (ov, i) { ov.setAttribute("video-overlay", "idx: " + i); });
+    });
     scene.addEventListener("arError", function () {
       closeAR();
       setStatus("Couldn't start the camera. Check camera permission and try again.", "err");
@@ -325,11 +413,10 @@ body.desktop #target-img { max-height:26vh; }
     document.querySelectorAll("video").forEach(function (v) {
       if (v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.remove(); }
     });
-    $("ar-close").classList.remove("show");
-    $("scan-hint").classList.remove("show");
-    $("unmute").classList.remove("show");
+    ["ar-close", "scan-hint", "unmute", "now-playing"].forEach(function (id) { $(id).classList.remove("show"); });
     $("splash").style.display = "";
-    if (arVid) { arVid.pause(); arVid.removeAttribute("src"); arVid.load(); arVid.remove(); arVid = null; }
+    videos.forEach(function (v) { if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.remove(); } });
+    videos = []; currentIdx = -1;
   }
   $("ar-close").onclick = closeAR;
 })();

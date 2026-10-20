@@ -28,6 +28,10 @@ window.APP_CONFIG = {
   PRO_PRICE_LABEL: "$9.99",
   PRO_PRICE_PERIOD: "month",
 
+  // How many of the newest photos the Explore AR camera can recognize at once
+  // (more = slower to start on older phones)
+  EXPLORE_LIMIT: 40,
+
   // Upload limits (also enforced by the storage bucket settings in schema.sql)
   MAX_VIDEO_MB: 20, // free Supabase plan has 1 GB total — keeps room for ~50 uploads
   MAX_IMAGE_MB: 10,

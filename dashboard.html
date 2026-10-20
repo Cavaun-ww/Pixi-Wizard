@@ -176,7 +176,7 @@
     const list = $("list");
     if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
     if (!data.length) {
-      list.innerHTML = '<div class="empty"><img src="logo-mark.png" alt="" class="float" style="width:90px;margin:0 auto"><p style="margin:10px 0 16px">No magic here yet.</p><a class="btn btn-primary" href="create.html">🪄 Make your first, it\'s free</a></div>';
+      list.innerHTML = '<div class="empty"><img src="logo-mark.png" alt="" class="float" style="width:90px;margin:0 auto"><p style="margin:10px 0 16px">No magic here yet.</p><a class="btn btn-primary" href="create.html">🪄 Make your first one</a></div>';
       return;
     }
     list.innerHTML = '<div class="grid">' + data.map((x) =>

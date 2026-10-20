@@ -206,9 +206,11 @@
     const s = configured ? await getSession() : null;
     if (s) {
       nav.innerHTML =
+        '<a class="link" href="explore.html">Explore</a>' +
         '<a class="btn btn-sm" href="dashboard.html">My page</a>';
     } else {
       nav.innerHTML =
+        '<a class="link" href="explore.html">Explore</a>' +
         '<a class="link hide-sm" href="index.html#pricing">Pricing</a>' +
         '<a class="btn btn-sm" href="auth.html">Sign in</a>';
     }
