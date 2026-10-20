@@ -129,7 +129,7 @@
         onApprove: async (data) => {
           msg.textContent = "Confirming with PayPal…";
           try {
-            await callFunction("paypal-activate", { subscriptionID: data.subscriptionID });
+            await callFunction("paypal?action=activate", { subscriptionID: data.subscriptionID });
             bg.classList.remove("show");
             toast("Welcome to Pro 🎉"); confetti();
             if (onDone) onDone();
@@ -151,7 +151,7 @@
     if (!confirm("Cancel your Pro subscription?" + until + " Everything you've made stays live.")) return false;
     try {
       if (btn) btn.disabled = true;
-      await callFunction("paypal-cancel");
+      await callFunction("paypal?action=cancel");
       toast("Subscription canceled");
       return true;
     } catch (e) {

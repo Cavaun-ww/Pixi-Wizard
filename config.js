@@ -18,9 +18,9 @@ window.APP_CONFIG = {
   GOOGLE_SIGN_IN: true,
 
   // PayPal → developer.paypal.com → Apps & Credentials (Client ID is public, safe here)
-  PAYPAL_CLIENT_ID: "YOUR-PAYPAL-CLIENT-ID",
+  PAYPAL_CLIENT_ID: "BAA4Voryl_nA8U5_ZAXo0BUe7JyLLdC10-gNiayC_7LtIY3fZ8HB5TOUjqFKjgMMkBc3JZn9EHSJI0PuzE",
   // The monthly plan you create in PayPal (starts with P-)
-  PAYPAL_PLAN_ID: "P-YOUR-PLAN-ID",
+  PAYPAL_PLAN_ID: "P-4WT42081HL971790ENLL4B4Q",
   // Must match the plan's currency
   PAYPAL_CURRENCY: "USD",
 
