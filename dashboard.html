@@ -145,7 +145,11 @@
     currentPlan = p;
     const line = $("plan-line"), note = $("plan-note");
     const date = (d) => new Date(d).toLocaleDateString();
-    if (p.is_pro) {
+    if (p.is_pro && p.status === "lifetime") {
+      line.innerHTML = '<span class="pill pro">Pro</span><span class="pill good">✨ Lifetime</span>';
+      note.textContent = "Unlimited AR experiences forever. Never billed.";
+      $("upgrade").hidden = true; $("manage").hidden = true;
+    } else if (p.is_pro) {
       const canceled = p.status === "cancelled";
       line.innerHTML = '<span class="pill pro">Pro</span>' +
         (canceled ? '<span class="pill warn">Canceled</span>' : '<span class="muted small">Unlimited experiences · PayPal</span>');
