@@ -81,7 +81,7 @@
           <span>Your page</span>
           <div class="input" id="handle-box" style="display:flex;align-items:center;gap:8px;overflow-wrap:anywhere;color:var(--text-2)">🔒 <span id="handle-preview"></span></div>
         </div>
-        <button class="btn btn-primary btn-lg btn-block" id="publish">🪄 Make it magic</button>
+        <button class="btn btn-primary btn-lg btn-block" id="publish">Create</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
           <p class="small muted" id="progress-msg" style="margin-top:8px"></p>
@@ -251,7 +251,7 @@
       if (el.focus && el.tagName === "INPUT") setTimeout(() => el.focus(), 400);
       return;
     }
-    busy = true; btn.disabled = true; btn.textContent = "Casting the spell…";
+    busy = true; btn.disabled = true; btn.textContent = "Creating…";
     const uploaded = [];
     try {
       // 2. turn the photo into an AR tracking target (runs in the browser)
@@ -281,7 +281,7 @@
       }
 
       // 4. save the experience
-      progress(95, "Sprinkling the pixie dust…");
+      progress(95, "Creating…");
       const { data: row, error } = await sb.from("experiences").insert({
         owner: uid,
         title: $("title").value.trim().slice(0, 80),
@@ -305,7 +305,7 @@
       const denied = /row-level security|violates|403|Unauthorized/i.test(e.message || "");
       if (denied) { $("creator").hidden = true; $("paywall").hidden = false; return; }
       App.toast(e.message || "Something went wrong", true);
-      btn.textContent = "🪄 Make it magic";
+      btn.textContent = "Create";
       busy = false; refresh();
     }
   };
