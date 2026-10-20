@@ -1,4 +1,4 @@
-# AR Creator: an AR website anyone can use
+# Pixi Wizard: AR for everyone
 
 People sign up, upload a **photo** (the target) and a **video** (the overlay), and get:
 

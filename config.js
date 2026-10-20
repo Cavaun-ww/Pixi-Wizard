@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 window.APP_CONFIG = {
   // Name shown in the header, page titles and emails
-  SITE_NAME: "AR Creator",
+  SITE_NAME: "Pixi Wizard",
 
   // Supabase → Project Settings → API
   SUPABASE_URL: "https://YOUR-PROJECT-REF.supabase.co",

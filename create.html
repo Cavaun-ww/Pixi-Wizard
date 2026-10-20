@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Create · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
@@ -19,8 +22,8 @@
 
   <!-- paywall: free experience already used and not subscribed -->
   <div id="paywall" class="card" hidden style="text-align:center">
-    <div style="font-size:2.6rem">✨</div>
-    <h2 style="margin:10px 0 6px">You've used your free AR experience</h2>
+    <img src="logo-mark.png" alt="" style="width:96px;margin:0 auto">
+    <h2 style="margin:10px 0 6px">Your free spell is used up</h2>
     <p class="muted" style="margin-bottom:22px">Go Pro to create unlimited experiences. Everything you've already made stays live on your page.</p>
     <div class="price" style="font-size:2rem;margin-bottom:18px"><span class="js-price"></span> <small class="muted" style="font-size:1rem">/ <span class="js-period"></span></small></div>
     <button class="btn btn-primary btn-lg btn-block" id="upgrade-btn">Upgrade to Pro</button>
@@ -30,7 +33,7 @@
   <!-- the creator -->
   <div id="creator" hidden>
     <div class="row" style="margin-bottom:18px">
-      <h2>New AR experience</h2>
+      <h2>Make some <span class="magic-text">magic</span></h2>
       <span class="spacer"></span>
       <span class="pill good" id="free-pill" hidden>Free</span>
       <span class="pill pro" id="pro-pill" hidden>Pro</span>
@@ -79,7 +82,7 @@
           <div class="input-prefix"><span class="pre" id="handle-pre"></span><input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
           <span class="small" id="handle-msg" style="margin-top:6px"></span>
         </label>
-        <button class="btn btn-primary btn-lg btn-block" id="publish" disabled>Publish AR experience</button>
+        <button class="btn btn-primary btn-lg btn-block" id="publish" disabled>🪄 Make it magic</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
           <p class="small muted" id="progress-msg" style="margin-top:8px"></p>
@@ -90,8 +93,8 @@
 
   <!-- success -->
   <div id="done" class="card" hidden style="text-align:center">
-    <div style="font-size:2.6rem">🎉</div>
-    <h2 style="margin:10px 0 6px">It's live!</h2>
+    <img src="logo-mark.png" alt="" class="float" style="width:110px;margin:0 auto">
+    <h2 style="margin:10px 0 6px">Abracadabra, <span class="magic-text">it's live!</span></h2>
     <p class="muted" style="margin-bottom:20px">Print or display your photo, then share this link or QR code. Anyone who opens it and points their camera at the photo will see your video.</p>
     <div class="qr-box" id="done-qr"></div>
     <div class="input-prefix" style="margin:20px 0 12px"><input class="input" id="done-link" readonly style="border-radius:12px 0 0 12px"><button class="btn" id="done-copy" style="border-radius:0 12px 12px 0">Copy</button></div>
@@ -249,7 +252,7 @@
 
   $("publish").onclick = async () => {
     const btn = $("publish");
-    btn.disabled = true; btn.textContent = "Publishing…";
+    btn.disabled = true; btn.textContent = "Casting the spell…";
     const uploaded = [];
     try {
       // 1. claim the page link
@@ -260,7 +263,7 @@
       }
 
       // 2. turn the photo into an AR tracking target (runs in the browser)
-      progress(5, "Analyzing your photo for AR tracking… (this can take 10–40 seconds)");
+      progress(5, "Teaching the camera to recognize your photo… (10–40 seconds)");
       const gl = document.createElement("canvas");
       if (!(gl.getContext("webgl2") || gl.getContext("webgl"))) {
         throw new Error("This browser has graphics acceleration (WebGL) turned off, which AR needs. Try Chrome or Safari on a phone or computer.");
@@ -286,7 +289,7 @@
       }
 
       // 4. save the experience
-      progress(95, "Publishing…");
+      progress(95, "Sprinkling the pixie dust…");
       const { data: row, error } = await sb.from("experiences").insert({
         owner: uid,
         title: $("title").value.trim().slice(0, 80),
@@ -308,13 +311,14 @@
       $("done-copy").onclick = () => App.copy(link);
       App.renderQR($("done-qr"), link, 180);
       window.scrollTo({ top: 0, behavior: "smooth" });
+      App.confetti();
     } catch (e) {
       console.error(e);
       if (uploaded.length) sb.storage.from(App.BUCKET).remove(uploaded); // tidy up partial uploads
       const denied = /row-level security|violates|403|Unauthorized/i.test(e.message || "");
       if (denied) { $("creator").hidden = true; $("paywall").hidden = false; return; }
       App.toast(e.message || "Something went wrong", true);
-      btn.textContent = "Publish AR experience";
+      btn.textContent = "🪄 Make it magic";
       refresh();
     }
   };

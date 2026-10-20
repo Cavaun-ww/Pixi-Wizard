@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My page · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
@@ -171,7 +174,7 @@
     const list = $("list");
     if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
     if (!data.length) {
-      list.innerHTML = '<div class="empty"><div style="font-size:2.4rem">🖼️</div><p style="margin:10px 0 16px">No AR experiences yet.</p><a class="btn btn-primary" href="create.html">Create your first — it\'s free</a></div>';
+      list.innerHTML = '<div class="empty"><img src="logo-mark.png" alt="" class="float" style="width:90px;margin:0 auto"><p style="margin:10px 0 16px">No magic here yet.</p><a class="btn btn-primary" href="create.html">🪄 Make your first, it\'s free</a></div>';
       return;
     }
     list.innerHTML = '<div class="grid">' + data.map((x) =>

@@ -4,15 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 <style>
   .prof { text-align: center; padding: 30px 0 34px; }
-  .avatar { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 14px; display: grid; place-items: center; font-size: 2.2rem; font-weight: 500; color: #fff; background: linear-gradient(135deg, var(--accent), #8a5bff); }
+  .avatar { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 14px; display: grid; place-items: center; font-size: 2.2rem; font-weight: 500; color: #fff; background: var(--magic); color: var(--accent-ink); box-shadow: 0 10px 30px -8px rgba(168,85,247,.6); }
   .prof .bio { max-width: 460px; margin: 10px auto 0; color: var(--text-2); }
 </style>
 </head>
@@ -57,7 +60,7 @@
             '<img class="thumb" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
             '<div class="body">' +
               '<div class="title">' + esc(x.title) + "</div>" +
-              '<div class="actions"><a class="btn btn-sm btn-primary" href="' + esc(App.arLink(x.slug)) + '">View in AR</a></div>' +
+              '<div class="actions"><a class="btn btn-sm btn-primary" href="' + esc(App.arLink(x.slug)) + '">✨ View in AR</a></div>' +
             "</div>" +
           "</div>").join("") + "</div>"
       : '<div class="empty">No AR experiences yet.</div>');

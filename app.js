@@ -93,7 +93,7 @@
       bg.className = "modal-bg"; bg.id = "upgrade-modal";
       bg.innerHTML =
         '<div class="modal" style="text-align:center">' +
-          '<span class="pill pro">Pro</span>' +
+          '<img src="logo-mark.png" alt="" style="width:84px;margin:0 auto 6px"><span class="pill pro">Pro</span>' +
           '<h2 style="margin:12px 0 4px">Unlimited AR experiences</h2>' +
           '<p class="muted" style="margin-bottom:14px">Cancel anytime. Everything you upload stays live.</p>' +
           '<div style="font-size:2rem;margin-bottom:16px">' + esc(C.PRO_PRICE_LABEL) + ' <span class="muted" style="font-size:1rem">/ ' + esc(C.PRO_PRICE_PERIOD) + "</span></div>" +
@@ -124,7 +124,7 @@
           try {
             await callFunction("paypal-activate", { subscriptionID: data.subscriptionID });
             bg.classList.remove("show");
-            toast("Welcome to Pro 🎉");
+            toast("Welcome to Pro 🎉"); confetti();
             if (onDone) onDone();
           } catch (e) {
             msg.textContent = "Payment went through but we couldn't confirm it yet (" + e.message + "). Refresh in a minute; if Pro doesn't appear, contact us.";
@@ -186,7 +186,7 @@
     const h = document.createElement("header");
     h.className = "site-header";
     h.innerHTML =
-      '<a class="brand" href="index.html"><span class="brand-mark">AR</span><span>' + esc(C.SITE_NAME) + "</span></a>" +
+      '<a class="brand" href="index.html"><img class="brand-mark" src="logo-mark.png" alt=""><span class="brand-name">' + esc(C.SITE_NAME) + "</span></a>" +
       '<nav class="nav" id="nav"></nav>';
     document.body.prepend(h);
     if (!configured) {
@@ -208,9 +208,26 @@
     }
   }
 
+  // a little celebration
+  function confetti(n) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const colors = ["#ffc24b", "#ff5fd2", "#a855f7", "#7c4dff", "#ffffff"];
+    for (let i = 0; i < (n || 90); i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = colors[i % colors.length];
+      c.style.animationDuration = 1.8 + Math.random() * 1.8 + "s";
+      c.style.animationDelay = Math.random() * 0.5 + "s";
+      c.style.transform = "rotate(" + Math.random() * 360 + "deg)";
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4500);
+    }
+  }
+
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
     getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
-    renderQR, copy, share, mountHeader,
+    renderQR, copy, share, mountHeader, confetti,
   };
 })();
