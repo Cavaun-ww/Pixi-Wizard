@@ -250,6 +250,8 @@ body.desktop #target-img { max-height:26vh; }
     ready();
   })();
 
+  function isPhoto(x) { return /\.(jpe?g|png|webp)$/i.test(x.video_path || ""); }
+
   function makeVideo(i) {
     if (videos[i]) return videos[i];
     var v = document.createElement("video");
@@ -271,9 +273,17 @@ body.desktop #target-img { max-height:26vh; }
       init: function () {
         var idx = this.data.idx, xp = xps[idx];
         if (!xp) return;
-        var video = makeVideo(idx);
+        var photo = isPhoto(xp);
+        var video = photo ? null : makeVideo(idx);
         var imgA = xp.image_aspect || 1, vidA = xp.video_aspect || 16 / 9;
-        var texture = new THREE.VideoTexture(video);
+        var texture;
+        if (photo) {
+          var loader = new THREE.TextureLoader();
+          loader.setCrossOrigin("anonymous");
+          texture = loader.load(pub(xp.video_path));
+        } else {
+          texture = new THREE.VideoTexture(video);
+        }
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
         if (vidA > imgA) { texture.repeat.x = imgA / vidA; texture.offset.x = (1 - texture.repeat.x) / 2; }
@@ -288,12 +298,13 @@ body.desktop #target-img { max-height:26vh; }
         targetEl.addEventListener("targetFound", function () {
           self.visible = true;
           currentIdx = idx;
-          video._wanted = true;
           $("scan-hint").classList.remove("show");
           if (isExplore) {
             $("now-playing").textContent = "✨ " + xp.title + (byName(xp) ? " · " + byName(xp) : "");
             $("now-playing").classList.add("show");
           }
+          if (!video) return; // photo overlay: nothing to play
+          video._wanted = true;
           video.play().catch(function () {
             // sound blocked by the browser → play muted and offer a tap-for-sound button
             video.muted = true;
@@ -303,8 +314,7 @@ body.desktop #target-img { max-height:26vh; }
         });
         targetEl.addEventListener("targetLost", function () {
           self.visible = false;
-          video._wanted = false;
-          video.pause();
+          if (video) { video._wanted = false; video.pause(); }
           if (currentIdx === idx) { $("now-playing").classList.remove("show"); }
           $("scan-hint").classList.add("show");
         });
@@ -343,7 +353,7 @@ body.desktop #target-img { max-height:26vh; }
     $("scan-hint").textContent = isExplore ? "Point at any photo from Explore" : "Point at the image";
     $("scan-hint").classList.add("show");
 
-    if (xps.length === 1) {
+    if (xps.length === 1 && !isPhoto(xps[0])) {
       // "unlock" playback with sound while we're still inside the tap (needed on iPhone)
       var v0 = makeVideo(0);
       var unlock = v0.play();

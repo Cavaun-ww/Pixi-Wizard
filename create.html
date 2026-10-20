@@ -58,14 +58,14 @@
     <div class="card">
       <div class="step-head">
         <div class="step-num" id="n2">2</div>
-        <div><div class="step-title">Overlay video</div><div class="step-sub">The video that appears on top when scanned</div></div>
+        <div><div class="step-title">Overlay video or photo</div><div class="step-sub">What appears on top when scanned</div></div>
       </div>
       <div class="drop" id="drop-vid">
-        <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime">
+        <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/jpeg,image/png,image/webp">
         <div class="empty-state">
           <div class="icon">🎬</div>
-          <div>Drop video here or <span class="browse">browse</span></div>
-          <div class="hint">MP4 · WebM — keep under <span class="js-maxvid"></span> MB for fast loading</div>
+          <div>Drop a video or photo here or <span class="browse">browse</span></div>
+          <div class="hint">MP4 · WebM · JPG · PNG — videos under <span class="js-maxvid"></span> MB</div>
         </div>
       </div>
     </div>
@@ -200,16 +200,30 @@
   });
 
   wireDrop("drop-vid", "file-vid", (file) => {
-    if (!/^video\//.test(file.type)) return App.toast("Please choose a video file.", true);
+    const done = (meta) => { $("n2").classList.add("done"); $("n2").textContent = "✓"; refresh(); };
+    // a photo as the overlay (PNG with a transparent background floats like a sticker)
+    if (/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      if (file.size > C.MAX_IMAGE_MB * 1048576) return App.toast("Photo is over " + C.MAX_IMAGE_MB + " MB.", true);
+      const im = new Image();
+      im.onload = () => {
+        vid = { file, w: im.naturalWidth || 1, h: im.naturalHeight || 1, kind: "image" };
+        const p = new Image(); p.src = im.src;
+        showPreview("drop-vid", p, "Photo · " + (file.size / 1048576).toFixed(1) + " MB");
+        done();
+      };
+      im.onerror = () => App.toast("That photo couldn't be read.", true);
+      im.src = URL.createObjectURL(file);
+      return;
+    }
+    if (!/^video\//.test(file.type)) return App.toast("Please choose a video or a JPG/PNG photo.", true);
     if (file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("Video is over " + C.MAX_VIDEO_MB + " MB. Try a shorter or smaller export.", true);
     const v = document.createElement("video");
     v.muted = true; v.playsInline = true; v.loop = true; v.autoplay = true; v.controls = false;
     v.setAttribute("playsinline", "");
     v.onloadedmetadata = () => {
-      vid = { file, w: v.videoWidth || 16, h: v.videoHeight || 9 };
+      vid = { file, w: v.videoWidth || 16, h: v.videoHeight || 9, kind: "video" };
       showPreview("drop-vid", v, (file.size / 1048576).toFixed(1) + " MB · " + Math.round(v.duration || 0) + "s");
-      $("n2").classList.add("done"); $("n2").textContent = "✓";
-      refresh();
+      done();
     };
     v.onerror = () => App.toast("This browser can't play that video. MP4 (H.264) works everywhere.", true);
     v.src = URL.createObjectURL(file);
@@ -220,7 +234,7 @@
   function refresh() { $("publish").disabled = busy; }
   function missing() {
     if (!img) return ["Add your photo first (step 1).", "drop-img"];
-    if (!vid) return ["Add your video (step 2).", "drop-vid"];
+    if (!vid) return ["Add your video or photo (step 2).", "drop-vid"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
     if (!handle) return ["Your page name isn't ready yet. Refresh the page and try again.", "title"];
     return null;
@@ -267,11 +281,14 @@
 
       // 3. upload files
       const folder = uid + "/" + crypto.randomUUID();
-      const ext = (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+      const isPic = vid.kind === "image";
+      const ext = isPic
+        ? ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[vid.file.type]
+        : (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
       const files = [
         { path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading photo…", pct: 58 },
         { path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", pct: 62 },
-        { path: folder + "/video." + ext, body: vid.file, type: vid.file.type || "video/mp4", msg: "Uploading video… (larger videos take longer)", pct: 66 },
+        { path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file, type: vid.file.type || "video/mp4", msg: isPic ? "Uploading overlay photo…" : "Uploading video… (larger videos take longer)", pct: 66 },
       ];
       for (const f of files) {
         progress(f.pct, f.msg);
