@@ -76,7 +76,7 @@
     return new Promise((res, rej) => {
       const s = document.createElement("script");
       s.src = "https://www.paypal.com/sdk/js?client-id=" + encodeURIComponent(C.PAYPAL_CLIENT_ID) +
-        "&vault=true&intent=subscription&components=buttons&currency=" + encodeURIComponent(C.PAYPAL_CURRENCY || "USD");
+        "&vault=true&intent=subscription&components=buttons&disable-funding=credit,paylater&currency=" + encodeURIComponent(C.PAYPAL_CURRENCY || "USD");
       s.setAttribute("data-namespace", "paypal");
       s.onload = () => res(window.paypal);
       s.onerror = () => rej(new Error("PayPal couldn't load. Turn off ad blockers and try again."));
@@ -104,7 +104,8 @@
           '<h2 style="margin:12px 0 4px">Unlimited AR experiences</h2>' +
           '<p class="muted" style="margin-bottom:14px">Cancel anytime. Everything you upload stays live.</p>' +
           '<div style="font-size:2rem;margin-bottom:16px">' + esc(C.PRO_PRICE_LABEL) + ' <span class="muted" style="font-size:1rem">/ ' + esc(C.PRO_PRICE_PERIOD) + "</span></div>" +
-          '<div id="paypal-buttons" style="min-height:120px;background:#fff;border-radius:14px;padding:14px 14px 4px"><p class="small" style="color:#555;padding:30px 0">Loading PayPal…</p></div>' +
+          '<div id="paypal-buttons" style="min-height:110px"><p class="small muted" style="padding:30px 0">Loading PayPal…</p></div>' +
+          '<p class="small muted" style="margin-top:4px">🔒 Secure checkout with PayPal or any card</p>' +
           '<p class="small muted" id="upgrade-msg" style="margin-top:12px"></p>' +
           '<button class="btn btn-ghost btn-block" id="upgrade-close" style="margin-top:6px">Not now</button>' +
         "</div>";
@@ -121,7 +122,7 @@
       const pp = await loadPayPal();
       box.innerHTML = "";
       await pp.Buttons({
-        style: { shape: "pill", color: "gold", layout: "vertical", label: "subscribe" },
+        style: { shape: "pill", color: "gold", layout: "vertical", label: "subscribe", height: 50 },
         createSubscription: (data, actions) => actions.subscription.create({
           plan_id: C.PAYPAL_PLAN_ID,
           custom_id: s.user.id, // ties the PayPal subscription to this account
@@ -142,7 +143,7 @@
       }).render(box);
       bg.dataset.rendered = "1";
     } catch (e) {
-      box.innerHTML = '<p class="small" style="color:#a00;padding:30px 0">' + esc(e.message) + "</p>";
+      box.innerHTML = '<p class="small" style="color:var(--bad);padding:30px 0">' + esc(e.message) + "</p>";
     }
   }
 
