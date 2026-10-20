@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261020-2">
+<link rel="stylesheet" href="styles.css?v=20261020-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261020-2"></script>
-<script src="app.js?v=20261020-2"></script>
+<script src="config.js?v=20261020-3"></script>
+<script src="app.js?v=20261020-3"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -32,6 +32,15 @@
     <!-- Profile -->
     <form class="card stack" id="profile-form">
       <h3>Profile</h3>
+      <div class="avatar-edit">
+        <div id="avatar-slot" title="Change profile photo"></div>
+        <div>
+          <button class="btn btn-sm" type="button" id="avatar-btn">Change photo</button>
+          <button class="btn btn-sm btn-ghost" type="button" id="avatar-remove" hidden>Remove</button>
+          <div class="small muted" style="margin-top:6px">Shows on your public page</div>
+        </div>
+        <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp,image/heic" hidden>
+      </div>
       <label class="field">
         <span>Page name</span>
         <input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false">
@@ -123,8 +132,11 @@
   let profile = {};
   async function loadProfile() {
     try { await App.ensureHandle(session); } catch (e) { /* shown as "…" until next visit */ }
-    const { data } = await sb.from("profiles").select("handle, display_name, bio").eq("id", uid).maybeSingle();
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path").eq("id", uid).maybeSingle();
     profile = data || {};
+    $("avatar-slot").innerHTML = App.avatarHTML(profile);
+    $("avatar-slot").firstChild.onclick = () => $("avatar-file").click();
+    $("avatar-remove").hidden = !profile.avatar_path;
     $("handle").value = profile.handle || "";
     $("handle-msg").textContent = "";
     linkPreview();
@@ -140,6 +152,38 @@
     linkPreview(); handleOk = false;
     clearTimeout(ht); ht = setTimeout(checkHandle, 350);
   });
+  $("avatar-btn").onclick = () => $("avatar-file").click();
+  $("avatar-file").onchange = async () => {
+    const f = $("avatar-file").files[0];
+    $("avatar-file").value = "";
+    if (!f) return;
+    if (f.size > 15 * 1048576) return App.toast("That photo is too large (max 15 MB).", true);
+    $("avatar-btn").disabled = true; $("avatar-btn").textContent = "Uploading…";
+    try {
+      const blob = await App.squareJpeg(f, 400);
+      const path = uid + "/avatar/" + Date.now() + ".jpg";
+      const up = await sb.storage.from(App.BUCKET).upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+      if (up.error) throw up.error;
+      const old = profile.avatar_path;
+      const { error } = await sb.from("profiles").update({ avatar_path: path }).eq("id", uid);
+      if (error) throw error;
+      if (old) sb.storage.from(App.BUCKET).remove([old]);
+      App.toast("Profile photo updated");
+      await loadProfile();
+    } catch (e) {
+      App.toast(e.message || "Upload failed", true);
+    } finally {
+      $("avatar-btn").disabled = false; $("avatar-btn").textContent = "Change photo";
+    }
+  };
+  $("avatar-remove").onclick = async () => {
+    const old = profile.avatar_path;
+    const { error } = await sb.from("profiles").update({ avatar_path: null }).eq("id", uid);
+    if (error) return App.toast(error.message, true);
+    if (old) sb.storage.from(App.BUCKET).remove([old]);
+    App.toast("Profile photo removed");
+    loadProfile();
+  };
   $("share-page").onclick = () => App.share(profile.display_name || profile.handle, App.profileLink(profile.handle));
   $("profile-form").onsubmit = async (e) => {
     e.preventDefault();

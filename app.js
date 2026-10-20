@@ -240,6 +240,30 @@
     throw new Error("Couldn't create your page name. Please try again.");
   }
 
+  // Profile photo: shown in the circle on a user's page; falls back to their first letter
+  function avatarHTML(p, size) {
+    const name = (p && (p.display_name || p.handle)) || "?";
+    const style = size ? ' style="width:' + size + "px;height:" + size + "px;font-size:" + Math.round(size * 0.42) + 'px"' : "";
+    if (p && p.avatar_path) return '<div class="avatar"' + style + '><img alt="" src="' + esc(publicUrl(p.avatar_path)) + '"></div>';
+    return '<div class="avatar"' + style + ">" + esc(name.replace("@", "").charAt(0).toUpperCase()) + "</div>";
+  }
+
+  // crop to a centered square, shrink to 400px, save as JPEG
+  function squareJpeg(file, px) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file), im = new Image();
+      im.onload = () => {
+        const side = Math.min(im.naturalWidth, im.naturalHeight), out = Math.min(px || 400, side);
+        const cv = document.createElement("canvas"); cv.width = cv.height = out;
+        cv.getContext("2d").drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, 0, 0, out, out);
+        cv.toBlob((b) => (b ? res(b) : rej(new Error("Couldn't read that photo."))), "image/jpeg", 0.88);
+        URL.revokeObjectURL(url);
+      };
+      im.onerror = () => rej(new Error("Couldn't read that photo. Try a JPG or PNG."));
+      im.src = url;
+    });
+  }
+
   // a little celebration
   function confetti(n) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -260,6 +284,6 @@
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
     getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
-    renderQR, copy, share, mountHeader, confetti, ensureHandle,
+    renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg,
   };
 })();

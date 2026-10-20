@@ -219,3 +219,12 @@ textarea.input { min-height: 90px; resize: vertical; }
 .private-toggle input:checked + .switch::after { transform: translateX(18px); }
 .private-toggle input:focus-visible + .switch { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 .pill.private { color: var(--accent-2); border-color: var(--line-2); }
+
+/* ── Profile photo ────────────────────────── */
+.avatar { width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center; font-family: var(--fun); font-size: 2.2rem; font-weight: 500; color: var(--accent-ink); background: var(--magic); box-shadow: 0 10px 30px -8px rgba(168,85,247,.6); overflow: hidden; flex: 0 0 auto; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-edit { display: flex; align-items: center; gap: 16px; }
+.avatar-edit .avatar { cursor: pointer; position: relative; }
+.avatar-edit .avatar::after { content: "📷"; position: absolute; right: -2px; bottom: -2px; width: 30px; height: 30px; border-radius: 50%; background: var(--card-2); border: 2px solid var(--card); display: grid; place-items: center; font-size: 0.9rem; }
+.avatar-edit .avatar { overflow: visible; }
+.avatar-edit .avatar img { border-radius: 50%; }
