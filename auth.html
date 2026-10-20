@@ -17,6 +17,11 @@
   .tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-bottom: 22px; }
   .tabs button { background: none; border: 0; color: var(--text-2); padding: 10px; border-radius: 9px; cursor: pointer; }
   .tabs button.on { background: var(--card-2); color: var(--text); }
+  .btn-google { width: 100%; background: #fff; color: #1f1f1f; border: 1px solid #dadce0; font-weight: 500; padding: 13px 18px; gap: 12px; }
+  .btn-google:hover { background: #f4f1fb; border-color: #dadce0; }
+  .btn-google svg { width: 20px; height: 20px; flex: 0 0 auto; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; margin: 18px 0; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 </style>
 </head>
 <body>
@@ -28,6 +33,11 @@
       <button id="tab-up" class="on" type="button">Sign up</button>
       <button id="tab-in" type="button">Sign in</button>
     </div>
+    <button class="btn btn-google" id="google" type="button" hidden>
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      <span>Continue with Google</span>
+    </button>
+    <div class="or" id="or" hidden>or use email</div>
     <form id="form" class="stack">
       <label class="field"><span>Email</span><input class="input" type="email" id="email" required autocomplete="email"></label>
       <label class="field"><span>Password</span><input class="input" type="password" id="password" required minlength="8" autocomplete="new-password"></label>
@@ -52,6 +62,19 @@
     $("password").autocomplete = m === "up" ? "new-password" : "current-password";
     $("forgot").hidden = m === "up";
   }
+  // Google sign-in (same button signs up new users and signs in returning ones)
+  if (App.C.GOOGLE_SIGN_IN) {
+    $("google").hidden = false; $("or").hidden = false;
+    $("google").onclick = async () => {
+      $("google").disabled = true;
+      const { error } = await App.sb.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: App.siteRoot + next },
+      });
+      if (error) { App.toast(error.message, true); $("google").disabled = false; }
+    };
+  }
+
   $("tab-up").onclick = () => setMode("up");
   $("tab-in").onclick = () => setMode("in");
   setMode(mode);
