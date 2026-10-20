@@ -34,8 +34,9 @@
       <h3>Profile</h3>
       <label class="field">
         <span>Page name</span>
-        <div class="input" style="display:flex;align-items:center;gap:8px;overflow-wrap:anywhere;color:var(--text-2)">🔒 <span id="handle-preview"></span></div>
-        <span class="small muted" style="display:block;margin-top:6px">Your page name is permanent so your links and QR codes always keep working.</span>
+        <input class="input" id="handle" maxlength="30" placeholder="yourname" autocapitalize="off" autocomplete="off" spellcheck="false">
+        <span class="small muted" id="handle-preview" style="display:block;margin-top:6px;overflow-wrap:anywhere"></span>
+        <span class="small" id="handle-msg" style="display:block;margin-top:2px"></span>
       </label>
       <label class="field"><span>Display name</span><input class="input" id="display_name" maxlength="60" placeholder="Your name or brand"></label>
       <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="A line about you"></textarea></label>
@@ -85,7 +86,19 @@
   const sb = App.sb, $ = (id) => document.getElementById(id), esc = App.esc;
   document.querySelectorAll(".js-price").forEach((e) => (e.textContent = App.C.PRO_PRICE_LABEL));
   document.querySelectorAll(".js-period").forEach((e) => (e.textContent = App.C.PRO_PRICE_PERIOD));
-  const linkPreview = () => ($("handle-preview").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + (profile.handle || "…"));
+  const linkPreview = () => ($("handle-preview").textContent = "Your page: " + App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + ($("handle").value || "…"));
+  let handleOk = true, ht;
+  async function checkHandle() {
+    const v = $("handle").value;
+    const msg = $("handle-msg");
+    if (v === (profile.handle || "")) { handleOk = true; msg.textContent = ""; return; }
+    if (!/^[a-z0-9_]{3,30}$/.test(v)) { handleOk = false; msg.textContent = "3–30 letters, numbers or _"; msg.style.color = "var(--muted)"; return; }
+    const { data } = await sb.from("profiles").select("id").eq("handle", v).maybeSingle();
+    if ($("handle").value !== v) return; // still typing
+    handleOk = !data || data.id === uid;
+    msg.textContent = handleOk ? "✓ Available. Your old page link will stop working after you save." : "Already taken, try another";
+    msg.style.color = handleOk ? "var(--good)" : "var(--bad)";
+  }
 
   // password-reset links land here
   sb.auth.onAuthStateChange(async (ev) => {
@@ -112,6 +125,8 @@
     try { await App.ensureHandle(session); } catch (e) { /* shown as "…" until next visit */ }
     const { data } = await sb.from("profiles").select("handle, display_name, bio").eq("id", uid).maybeSingle();
     profile = data || {};
+    $("handle").value = profile.handle || "";
+    $("handle-msg").textContent = "";
     linkPreview();
     $("display_name").value = profile.display_name || "";
     $("bio").value = profile.bio || "";
@@ -120,16 +135,24 @@
     $("share-page").hidden = !has;
     if (has) $("view-public").href = App.profileLink(profile.handle);
   }
+  $("handle").addEventListener("input", () => {
+    $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    linkPreview(); handleOk = false;
+    clearTimeout(ht); ht = setTimeout(checkHandle, 350);
+  });
   $("share-page").onclick = () => App.share(profile.display_name || profile.handle, App.profileLink(profile.handle));
   $("profile-form").onsubmit = async (e) => {
     e.preventDefault();
+    clearTimeout(ht); await checkHandle();
+    if (!handleOk) return App.toast($("handle-msg").textContent || "Pick a different page name", true);
     $("save").disabled = true;
     const { error } = await sb.from("profiles").update({
+      handle: $("handle").value,
       display_name: $("display_name").value.trim() || null,
       bio: $("bio").value.trim() || null,
     }).eq("id", uid);
     $("save").disabled = false;
-    if (error) return App.toast(error.message, true);
+    if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
     App.toast("Profile saved");
     loadProfile();
   };
@@ -218,7 +241,7 @@
   async function del(x) {
     if (!confirm('Delete "' + x.title + '"? The link and QR code will stop working. This can\'t be undone.')) return;
     const { error } = await sb.from("experiences").delete().eq("id", x.id);
-    if (error) return App.toast(error.message, true);
+    if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
     await sb.storage.from(App.BUCKET).remove([x.image_path, x.mind_path, x.video_path]);
     App.toast("Deleted");
     loadList(); loadPlan();
