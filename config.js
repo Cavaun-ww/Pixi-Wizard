@@ -10,6 +10,9 @@ window.APP_CONFIG = {
   SUPABASE_URL: "https://eoeoegmdgdwyxaksqbzc.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvZW9lZ21kZ2R3eXhha3NxYnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MDc3NjUsImV4cCI6MjEwODA4Mzc2NX0.Wv-vtm0m8hp7cjMMWKOEpz2GnVsyFq8WdM-hz5SX858",
 
+  // Shown on the Privacy and Terms pages for support / account deletion
+  SUPPORT_EMAIL: "cavauntechnologies@gmail.com",
+
   // Show the "Continue with Google" button (needs Google turned on in
   // Supabase → Authentication → Sign In / Providers → Google)
   GOOGLE_SIGN_IN: true,

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0716">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<style>
+  .legal h1 { font-size: 2rem; margin-bottom: 4px; }
+  .legal h2 { font-size: 1.2rem; margin: 28px 0 8px; }
+  .legal p, .legal li { color: var(--text-2); margin-bottom: 10px; }
+  .legal ul { padding-left: 22px; }
+</style>
+</head>
+<body>
+<main class="wrap legal">
+  <h1>Privacy Policy</h1>
+  <p class="small muted">Last updated: October 20, 2026</p>
+  <p><span class="js-name">Pixi Wizard</span> ("we", "us") lets people upload a photo and a video and share them as an augmented reality (AR) experience. This policy explains what we collect and how we use it.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><b>Account info:</b> your email address, and your name and profile picture if you sign in with Google.</li>
+    <li><b>Profile info you add:</b> your page link (handle), display name and bio.</li>
+    <li><b>Content you upload:</b> photos, videos and the titles you give them.</li>
+    <li><b>Subscription info:</b> if you subscribe, PayPal handles your payment. We receive your PayPal subscription ID, status and the email on your PayPal account. We never see or store your card or bank details.</li>
+  </ul>
+
+  <h2>What's public</h2>
+  <p>Your profile page, your handle, display name, bio, and every AR experience you publish (photo, video and title) can be seen by anyone with the link. Don't upload anything you want to keep private.</p>
+
+  <h2>Camera</h2>
+  <p>When you view an AR experience, your phone's camera is used live in your browser to find the photo. Camera images are never recorded or sent to us.</p>
+
+  <h2>How we use your info</h2>
+  <ul>
+    <li>To run your account and show your AR experiences and profile page.</li>
+    <li>To manage your subscription.</li>
+    <li>To keep the service safe and remove content that breaks our <a href="terms.html">Terms</a>.</li>
+  </ul>
+  <p>We don't sell your personal information and we don't use it for advertising.</p>
+
+  <h2>Services we use</h2>
+  <ul>
+    <li><b>Supabase</b> stores accounts, uploads and profile data.</li>
+    <li><b>PayPal</b> processes subscription payments.</li>
+    <li><b>Google</b> provides "Continue with Google" sign-in, if you choose it.</li>
+    <li><b>GitHub Pages</b> hosts the website.</li>
+  </ul>
+
+  <h2>Deleting your data</h2>
+  <p>You can delete any AR experience from your page at any time, which removes its photo and video. To delete your whole account, contact us <span class="js-email">through the email listed on our site</span> and we'll remove it.</p>
+
+  <h2>Children</h2>
+  <p>This service isn't intended for children under 13, and we don't knowingly collect their information.</p>
+
+  <h2>Changes</h2>
+  <p>If we change this policy, we'll update the date at the top of this page.</p>
+
+  <h2>Contact</h2>
+  <p>Questions? Reach us <span class="js-email">through the email listed on our site</span>.</p>
+</main>
+<footer class="footer"><a href="index.html">Home</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></footer>
+<script>
+  App.mountHeader();
+  document.querySelectorAll(".js-name").forEach((e) => (e.textContent = App.C.SITE_NAME));
+  document.querySelectorAll(".js-email").forEach((e) => {
+    const m = App.C.SUPPORT_EMAIL;
+    if (m) { e.innerHTML = '<a href="mailto:' + App.esc(m) + '">' + App.esc(m) + "</a>"; }
+  });
+</script>
+</body>
+</html>

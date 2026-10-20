@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms of Service · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0716">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<style>
+  .legal h1 { font-size: 2rem; margin-bottom: 4px; }
+  .legal h2 { font-size: 1.2rem; margin: 28px 0 8px; }
+  .legal p, .legal li { color: var(--text-2); margin-bottom: 10px; }
+  .legal ul { padding-left: 22px; }
+</style>
+</head>
+<body>
+<main class="wrap legal">
+  <h1>Terms of Service</h1>
+  <p class="small muted">Last updated: October 20, 2026</p>
+  <p>By using <span class="js-name">Pixi Wizard</span>, you agree to these terms.</p>
+
+  <h2>Your account</h2>
+  <p>You're responsible for your account and everything posted from it. Keep your password safe.</p>
+
+  <h2>Your content</h2>
+  <p>You keep ownership of the photos and videos you upload. By uploading, you give us permission to store and display them so your AR experiences and profile page work, including to anyone who has the link.</p>
+  <p>Only upload content you have the right to share. Don't upload content that:</p>
+  <ul>
+    <li>is illegal, hateful, harassing, violent or sexually explicit;</li>
+    <li>infringes someone else's copyright, trademark or privacy;</li>
+    <li>contains malware or is meant to mislead or scam people.</li>
+  </ul>
+  <p>We can remove content or close accounts that break these rules.</p>
+
+  <h2>Free and Pro plans</h2>
+  <ul>
+    <li>Every account gets <b>one free AR experience</b>.</li>
+    <li>Creating more requires a <b>Pro subscription</b>, billed monthly through PayPal at the price shown on our site, until you cancel.</li>
+    <li>You can cancel anytime from your page or from your PayPal account. You keep Pro until the end of the period you've paid for. We don't give refunds for partial months.</li>
+    <li>Everything you've already created stays on your page after you cancel.</li>
+    <li>We may change prices with advance notice. Changes apply from your next billing period.</li>
+  </ul>
+
+  <h2>Availability</h2>
+  <p>We work to keep the service running, but it's provided "as is" without guarantees. AR depends on your phone, browser and camera, and may not work on every device.</p>
+
+  <h2>Limitation of liability</h2>
+  <p>To the extent allowed by law, we aren't liable for indirect or consequential losses arising from your use of the service. Our total liability is limited to what you paid us in the last 3 months.</p>
+
+  <h2>Changes</h2>
+  <p>We may update these terms. If we do, we'll update the date at the top. Continuing to use the service means you accept the new terms.</p>
+
+  <h2>Contact</h2>
+  <p>Questions? Reach us <span class="js-email">through the email listed on our site</span>.</p>
+</main>
+<footer class="footer"><a href="index.html">Home</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></footer>
+<script>
+  App.mountHeader();
+  document.querySelectorAll(".js-name").forEach((e) => (e.textContent = App.C.SITE_NAME));
+  document.querySelectorAll(".js-email").forEach((e) => {
+    const m = App.C.SUPPORT_EMAIL;
+    if (m) { e.innerHTML = '<a href="mailto:' + App.esc(m) + '">' + App.esc(m) + "</a>"; }
+  });
+</script>
+</body>
+</html>
