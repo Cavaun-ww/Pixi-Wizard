@@ -198,7 +198,7 @@ body.desktop #target-img { max-height:26vh; }
   // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
-    var cols = "slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, profiles(handle, display_name)";
+    var cols = "slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, profiles(handle, display_name)";
 
     if (isExplore) {
       document.title = "Explore · " + C.SITE_NAME;
@@ -210,14 +210,15 @@ body.desktop #target-img { max-height:26vh; }
       var r = await sb.from("experiences").select(cols).order("created_at", { ascending: false }).limit(EXPLORE_LIMIT);
       var list = (r.data || []);
       if (!list.length) { $("by").textContent = "No AR experiences yet. Be the first!"; $("start-btn").textContent = "Nothing to scan yet"; return; }
-      $("collage").innerHTML = list.slice(0, 9).map(function (x) { return '<img alt="" loading="lazy" src="' + pub(x.image_path) + '">'; }).join("");
+      var publicList = list.filter(function (x) { return !x.is_private; });
+      $("collage").innerHTML = publicList.slice(0, 9).map(function (x) { return '<img alt="" loading="lazy" src="' + pub(x.image_path) + '">'; }).join("");
       $("collage").hidden = false;
-      if (!isMobile) { $("by").innerHTML = list.length + ' photos from the community · <a href="explore.html">see all</a>'; $("start-btn").textContent = "🪄 Start AR camera"; return; }
+      if (!isMobile) { $("by").innerHTML = publicList.length + ' photos from the community · <a href="explore.html">see all</a>'; $("start-btn").textContent = "🪄 Start AR camera"; return; }
       setStatus("Getting the magic ready…");
       var merged = await mergeMinds(list);
       if (!merged) { setStatus("Couldn't load the photos. Try refreshing.", "err"); return; }
       xps = merged.xps; mindSrc = merged.url;
-      $("by").innerHTML = xps.length + ' photos from the community · <a href="explore.html">see all</a>';
+      $("by").innerHTML = publicList.length + ' photos from the community · <a href="explore.html">see all</a>';
       setStatus("");
       ready();
       return;

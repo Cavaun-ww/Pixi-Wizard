@@ -194,7 +194,7 @@
   // ── experiences ────────────────────────────────────────────
   async function loadList() {
     const { data, error } = await sb.from("experiences")
-      .select("id, slug, title, image_path, mind_path, video_path, created_at")
+      .select("id, slug, title, image_path, mind_path, video_path, created_at, is_private")
       .eq("owner", uid).order("created_at", { ascending: false });
     const list = $("list");
     if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
@@ -207,13 +207,15 @@
         '<img class="thumb" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
         '<div class="body">' +
           '<div class="title">' + esc(x.title) + "</div>" +
-          '<div class="small muted">' + new Date(x.created_at).toLocaleDateString() + "</div>" +
+          '<div class="row small muted" style="gap:8px">' + new Date(x.created_at).toLocaleDateString() +
+            (x.is_private ? '<span class="pill private">🔒 Private</span>' : '<span class="pill">🌍 Public</span>') + "</div>" +
           '<div class="actions">' +
             '<a class="btn btn-sm btn-primary" target="_blank" href="' + esc(App.arLink(x.slug)) + '">View</a>' +
             '<button class="btn btn-sm" data-act="copy">Link</button>' +
             '<button class="btn btn-sm" data-act="qr">QR</button>' +
             '<button class="btn btn-sm btn-danger" data-act="del" aria-label="Delete">✕</button>' +
           "</div>" +
+          '<button class="btn btn-sm btn-ghost btn-block" data-act="priv">' + (x.is_private ? "🌍 Make public" : "🔒 Make private") + "</button>" +
         "</div>" +
       "</div>").join("") + "</div>";
 
@@ -222,6 +224,13 @@
       card.querySelector('[data-act="copy"]').onclick = () => App.copy(App.arLink(x.slug));
       card.querySelector('[data-act="qr"]').onclick = () => openQR(x);
       card.querySelector('[data-act="del"]').onclick = () => del(x);
+      card.querySelector('[data-act="priv"]').onclick = async (e) => {
+        e.currentTarget.disabled = true;
+        const { error } = await sb.from("experiences").update({ is_private: !x.is_private }).eq("id", x.id);
+        if (error) { e.currentTarget.disabled = false; return App.toast(error.message, true); }
+        App.toast(x.is_private ? "Now public: it shows on Explore" : "Now private: hidden from Explore");
+        loadList();
+      };
     });
   }
 

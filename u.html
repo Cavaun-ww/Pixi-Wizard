@@ -44,7 +44,7 @@
   const name = p.display_name || "@" + p.handle;
   document.title = name + " · " + App.C.SITE_NAME;
   const { data: xs } = await sb.from("experiences")
-    .select("slug, title, image_path, created_at").eq("owner", p.id).order("created_at", { ascending: false });
+    .select("slug, title, image_path, created_at").eq("owner", p.id).eq("is_private", false).order("created_at", { ascending: false });
 
   box.innerHTML =
     '<div class="prof">' +

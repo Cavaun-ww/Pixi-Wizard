@@ -73,7 +73,7 @@
     <div class="card">
       <div class="step-head">
         <div class="step-num" id="n3">3</div>
-        <div><div class="step-title">Name it &amp; publish</div><div class="step-sub">It will appear on your public page</div></div>
+        <div><div class="step-title">Name it &amp; publish</div><div class="step-sub">Give it a title and choose who can find it</div></div>
       </div>
       <div class="stack">
         <label class="field"><span>Title</span><input class="input" id="title" maxlength="80" placeholder="e.g. Summer tour poster"></label>
@@ -81,6 +81,11 @@
           <span>Your page</span>
           <div class="input" id="handle-box" style="display:flex;align-items:center;gap:8px;overflow-wrap:anywhere;color:var(--text-2)">🔒 <span id="handle-preview"></span></div>
         </div>
+        <label class="private-toggle">
+          <input type="checkbox" id="is-private">
+          <span class="switch" aria-hidden="true"></span>
+          <span><b>🔒 Private</b><br><span class="small muted">Hidden from Explore and your public page. Your link, QR code and the AR camera still work.</span></span>
+        </label>
         <button class="btn btn-primary btn-lg btn-block" id="publish">Create</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
@@ -307,6 +312,7 @@
         video_path: files[2].path,
         image_aspect: img.w / img.h,
         video_aspect: vid.w / vid.h,
+        is_private: $("is-private").checked,
       }).select("slug").single();
       if (error) throw error;
       progress(100, "Done");

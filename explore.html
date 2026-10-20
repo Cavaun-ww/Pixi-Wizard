@@ -64,6 +64,7 @@
     $("more").disabled = true;
     const { data, error } = await sb.from("experiences")
       .select("slug, title, image_path, created_at, profiles(handle, display_name)")
+      .eq("is_private", false)
       .order("created_at", { ascending: false })
       .range(from, from + PAGE - 1);
     $("more").disabled = false;
