@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261020-6">
+<link rel="stylesheet" href="styles.css?v=20261020-8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261020-6"></script>
-<script src="app.js?v=20261020-6"></script>
+<script src="config.js?v=20261020-8"></script>
+<script src="app.js?v=20261020-8"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -50,9 +50,19 @@
       <label class="field"><span>Display name</span><input class="input" id="display_name" maxlength="60" placeholder="Your name or brand"></label>
       <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="A line about you"></textarea></label>
       <div class="field">
-        <span>Page color</span>
+        <span>Accent color</span>
         <div class="swatches" id="swatches"></div>
-        <span class="small muted" style="display:block;margin-top:6px">Tap to preview, then Save profile.</span>
+      </div>
+      <div class="field">
+        <span>Page background</span>
+        <div class="bg-tools" id="bg-colors"></div>
+        <div class="bg-tools">
+          <button class="btn btn-sm" type="button" id="bg-photo-btn">🖼️ Use a photo</button>
+          <button class="btn btn-sm btn-ghost" type="button" id="bg-reset">Reset to default</button>
+        </div>
+        <input type="file" id="bg-file" accept="image/jpeg,image/png,image/webp,image/heic" hidden>
+        <div class="bg-preview" id="bg-preview"></div>
+        <span class="small muted" style="display:block;margin-top:6px">Tap to preview, then Save profile. <a href="#" id="see-page">See my page ↗</a></span>
       </div>
       <div class="row">
         <button class="btn btn-primary" type="submit" id="save">Save profile</button>
@@ -137,10 +147,13 @@
   let profile = {};
   async function loadProfile() {
     try { await App.ensureHandle(session); } catch (e) { /* shown as "…" until next visit */ }
-    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, theme").eq("id", uid).maybeSingle();
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, theme, bg_color, bg_image_path").eq("id", uid).maybeSingle();
     profile = data || {};
     chosenTheme = profile.theme || "wizard";
+    bgColor = profile.bg_color || null;
+    bgImage = profile.bg_image_path || null;
     renderSwatches();
+    renderBg();
     $("avatar-slot").innerHTML = App.avatarHTML(profile);
     $("avatar-slot").firstChild.onclick = () => $("avatar-file").click();
     $("avatar-remove").hidden = !profile.avatar_path;
@@ -159,7 +172,53 @@
     linkPreview(); handleOk = false;
     clearTimeout(ht); ht = setTimeout(checkHandle, 350);
   });
-  let chosenTheme = "wizard";
+  let chosenTheme = "wizard", bgColor = null, bgImage = null;
+  function previewProfile() { return { theme: chosenTheme, bg_color: bgColor, bg_image_path: bgImage }; }
+  function renderBg() {
+    $("bg-colors").innerHTML =
+      '<button type="button" class="bg-swatch" data-c="" title="Theme default" aria-pressed="' + (!bgColor && !bgImage) + '" style="background:' + App.THEMES[chosenTheme].magic + '"></button>' +
+      App.BG_COLORS.map((c) => '<button type="button" class="bg-swatch" data-c="' + c + '" aria-pressed="' + (bgColor === c && !bgImage) + '" style="background:' + c + '"></button>').join("") +
+      '<label class="color-pick" title="Pick any color"><input type="color" id="bg-custom" value="' + (bgColor || "#4c1d95") + '"></label>';
+    $("bg-colors").querySelectorAll(".bg-swatch").forEach((b) => (b.onclick = () => { bgColor = b.dataset.c || null; bgImage = null; renderBg(); }));
+    $("bg-custom").oninput = (e) => { bgColor = e.target.value; bgImage = null; App.applyBackground(previewProfile()); updatePreview(); };
+    $("bg-custom").onchange = () => renderBg();
+    App.applyBackground(previewProfile());
+    updatePreview();
+  }
+  function updatePreview() {
+    const el = $("bg-preview");
+    el.style.background = getComputedStyle(document.body).backgroundImage + ", " + getComputedStyle(document.body).backgroundColor;
+    el.style.backgroundSize = "cover"; el.style.backgroundPosition = "center";
+  }
+  $("bg-photo-btn").onclick = () => $("bg-file").click();
+  $("bg-file").onchange = async () => {
+    const f = $("bg-file").files[0]; $("bg-file").value = "";
+    if (!f) return;
+    if (f.size > 20 * 1048576) return App.toast("That photo is too large (max 20 MB).", true);
+    $("bg-photo-btn").disabled = true; $("bg-photo-btn").textContent = "Uploading…";
+    try {
+      const blob = await new Promise((res, rej) => {
+        const im = new Image(), u = URL.createObjectURL(f);
+        im.onload = () => {
+          const k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
+          const cv = document.createElement("canvas"); cv.width = Math.round(im.naturalWidth * k); cv.height = Math.round(im.naturalHeight * k);
+          cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+          cv.toBlob((b) => (b ? res(b) : rej(new Error("Couldn't read that photo."))), "image/jpeg", 0.85);
+        };
+        im.onerror = () => rej(new Error("Couldn't read that photo. Try a JPG or PNG."));
+        im.src = u;
+      });
+      const path = uid + "/avatar/bg-" + Date.now() + ".jpg";
+      const up = await sb.storage.from(App.BUCKET).upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+      if (up.error) throw up.error;
+      bgImage = path; bgColor = null;
+      renderBg();
+      App.toast("Looks good? Tap Save profile to keep it.");
+    } catch (e) { App.toast(e.message || "Upload failed", true); }
+    finally { $("bg-photo-btn").disabled = false; $("bg-photo-btn").textContent = "🖼️ Use a photo"; }
+  };
+  $("bg-reset").onclick = () => { bgColor = null; bgImage = null; renderBg(); };
+  $("see-page").onclick = (e) => { e.preventDefault(); if (profile.handle) window.open(App.profileLink(profile.handle), "_blank"); };
   function renderSwatches() {
     $("swatches").innerHTML = Object.keys(App.THEMES).map((k) =>
       '<button type="button" class="swatch" data-k="' + k + '" aria-pressed="' + (k === chosenTheme) + '">' +
@@ -167,7 +226,7 @@
     $("swatches").querySelectorAll(".swatch").forEach((b) => (b.onclick = () => {
       chosenTheme = b.dataset.k;
       App.applyTheme(chosenTheme); document.body.classList.add("themed");
-      renderSwatches();
+      renderSwatches(); renderBg();
     }));
     App.applyTheme(chosenTheme); document.body.classList.add("themed");
   }
@@ -214,9 +273,12 @@
       display_name: $("display_name").value.trim() || null,
       bio: $("bio").value.trim() || null,
       theme: chosenTheme,
+      bg_color: bgColor,
+      bg_image_path: bgImage,
     }).eq("id", uid);
     $("save").disabled = false;
     if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
+    if (profile.bg_image_path && profile.bg_image_path !== bgImage) sb.storage.from(App.BUCKET).remove([profile.bg_image_path]);
     App.toast("Profile saved");
     loadProfile();
   };
@@ -315,6 +377,7 @@
     if (!confirm('Delete "' + x.title + '"? The link and QR code will stop working. This can\'t be undone.')) return;
     const { error } = await sb.from("experiences").delete().eq("id", x.id);
     if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
+    if (profile.bg_image_path && profile.bg_image_path !== bgImage) sb.storage.from(App.BUCKET).remove([profile.bg_image_path]);
     await sb.storage.from(App.BUCKET).remove([x.image_path, x.mind_path, x.video_path]);
     App.toast("Deleted");
     loadList(); loadPlan();

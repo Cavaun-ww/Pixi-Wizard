@@ -290,6 +290,42 @@
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.bg;
   }
 
+  // Page background: a photo, a custom color, or the theme's own colors (full page)
+  function shade(hex, amt) { // amt -1..1, darken/lighten a #rrggbb
+    const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const f = (c) => Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt);
+    return "#" + [f(r), f(g), f(b)].map((c) => c.toString(16).padStart(2, "0")).join("");
+  }
+  function applyBackground(p) {
+    const b = document.body, t = THEMES[(p && p.theme)] || THEMES.wizard;
+    b.style.backgroundAttachment = "fixed";
+    b.style.backgroundSize = "cover";
+    b.style.backgroundPosition = "center";
+    b.style.backgroundRepeat = "no-repeat";
+    if (p && p.bg_image_path) {
+      b.style.backgroundColor = "#000";
+      b.style.backgroundImage = "linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.55)), url('" + publicUrl(p.bg_image_path) + "')";
+    } else if (p && /^#[0-9a-f]{6}$/i.test(p.bg_color || "")) {
+      b.style.backgroundColor = p.bg_color;
+      b.style.backgroundImage = "linear-gradient(170deg, " + shade(p.bg_color, 0.12) + " 0%, " + p.bg_color + " 45%, " + shade(p.bg_color, -0.45) + " 100%)";
+    } else {
+      b.style.backgroundColor = t.bg;
+      b.style.backgroundImage =
+        "radial-gradient(1100px 700px at 10% -10%, rgba(" + t.g1 + ",.55) 0%, transparent 65%)," +
+        "radial-gradient(900px 700px at 100% 40%, rgba(" + t.g2 + ",.30) 0%, transparent 65%)," +
+        "radial-gradient(900px 700px at 0% 100%, rgba(" + t.g1 + ",.28) 0%, transparent 65%)";
+    }
+    b.classList.add("custom-bg");
+    // light backgrounds get a darker glass panel so text stays crisp
+    let light = false;
+    if (p && !p.bg_image_path && /^#[0-9a-f]{6}$/i.test(p.bg_color || "")) {
+      const n = parseInt(p.bg_color.slice(1), 16);
+      light = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 > 0.55;
+    }
+    b.classList.toggle("light-bg", light);
+  }
+  const BG_COLORS = ["#1e1b4b", "#0c4a6e", "#134e4a", "#14532d", "#713f12", "#7c2d12", "#831843", "#3b0764", "#111827", "#f5f5f4", "#fde68a", "#fbcfe8"];
+
   // a little celebration
   function confetti(n) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -310,6 +346,6 @@
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
     getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
-    renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme,
+    renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme, applyBackground, BG_COLORS,
   };
 })();
