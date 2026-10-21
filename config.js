@@ -33,6 +33,6 @@ window.APP_CONFIG = {
   EXPLORE_LIMIT: 40,
 
   // Upload limits (also enforced by the storage bucket settings in schema.sql)
-  MAX_VIDEO_MB: 10, // keeps storage and viewing bandwidth costs down
+  MAX_VIDEO_MB: 20, // phone videos of 10–20 seconds fit
   MAX_IMAGE_MB: 10,
 };
