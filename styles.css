@@ -238,3 +238,13 @@ textarea.input { min-height: 90px; resize: vertical; }
 .themed .prof h1 { background: var(--magic); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .themed .prof .avatar { box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--accent), 0 14px 40px -8px var(--accent); }
 .themed .xp { border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* gradient buttons: paint the gradient under the border too, so no thin
+   strip of the opposite color shows at the rounded ends */
+.btn-primary, .themed .btn-primary, .pill.pro, .step-num, .avatar, .private-toggle input:checked + .switch {
+  background-origin: border-box;
+  background-clip: border-box;
+}
+.btn-primary, .themed .btn-primary { border: 0; padding-top: 12px; padding-bottom: 12px; }
+.btn-primary.btn-lg { padding-top: 16px; padding-bottom: 16px; }
+.btn-primary.btn-sm { padding-top: 8px; padding-bottom: 8px; }
