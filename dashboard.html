@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261020-3">
+<link rel="stylesheet" href="styles.css?v=20261020-5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261020-3"></script>
-<script src="app.js?v=20261020-3"></script>
+<script src="config.js?v=20261020-5"></script>
+<script src="app.js?v=20261020-5"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -49,6 +49,11 @@
       </label>
       <label class="field"><span>Display name</span><input class="input" id="display_name" maxlength="60" placeholder="Your name or brand"></label>
       <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="A line about you"></textarea></label>
+      <div class="field">
+        <span>Page color</span>
+        <div class="swatches" id="swatches"></div>
+        <span class="small muted" style="display:block;margin-top:6px">Tap to preview, then Save profile.</span>
+      </div>
       <div class="row">
         <button class="btn btn-primary" type="submit" id="save">Save profile</button>
         <button class="btn btn-ghost" type="button" id="share-page" hidden>Share my page</button>
@@ -132,8 +137,10 @@
   let profile = {};
   async function loadProfile() {
     try { await App.ensureHandle(session); } catch (e) { /* shown as "…" until next visit */ }
-    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path").eq("id", uid).maybeSingle();
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, theme").eq("id", uid).maybeSingle();
     profile = data || {};
+    chosenTheme = profile.theme || "wizard";
+    renderSwatches();
     $("avatar-slot").innerHTML = App.avatarHTML(profile);
     $("avatar-slot").firstChild.onclick = () => $("avatar-file").click();
     $("avatar-remove").hidden = !profile.avatar_path;
@@ -152,6 +159,18 @@
     linkPreview(); handleOk = false;
     clearTimeout(ht); ht = setTimeout(checkHandle, 350);
   });
+  let chosenTheme = "wizard";
+  function renderSwatches() {
+    $("swatches").innerHTML = Object.keys(App.THEMES).map((k) =>
+      '<button type="button" class="swatch" data-k="' + k + '" aria-pressed="' + (k === chosenTheme) + '">' +
+      '<span class="dot" style="background:' + App.THEMES[k].magic + '"></span>' + App.THEMES[k].name + "</button>").join("");
+    $("swatches").querySelectorAll(".swatch").forEach((b) => (b.onclick = () => {
+      chosenTheme = b.dataset.k;
+      App.applyTheme(chosenTheme); document.body.classList.add("themed");
+      renderSwatches();
+    }));
+    App.applyTheme(chosenTheme); document.body.classList.add("themed");
+  }
   $("avatar-btn").onclick = () => $("avatar-file").click();
   $("avatar-file").onchange = async () => {
     const f = $("avatar-file").files[0];
@@ -194,6 +213,7 @@
       handle: $("handle").value,
       display_name: $("display_name").value.trim() || null,
       bio: $("bio").value.trim() || null,
+      theme: chosenTheme,
     }).eq("id", uid);
     $("save").disabled = false;
     if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);

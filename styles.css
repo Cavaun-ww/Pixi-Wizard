@@ -74,6 +74,7 @@ button { font: inherit; }
 .btn:active { transform: scale(0.98); }
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; }
 .btn-primary { background: linear-gradient(120deg, #ff5fd2, #a855f7 60%, #7c4dff); border-color: transparent; color: #fff; font-weight: 500; box-shadow: 0 6px 22px -6px rgba(214, 80, 240, .7); }
+.themed .btn-primary { background: var(--magic); color: var(--accent-ink); box-shadow: 0 6px 22px -6px var(--accent); }
 .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 10px 28px -6px rgba(214, 80, 240, .85); }
 .btn-ghost { background: transparent; }
 .btn-danger { background: transparent; border-color: #4a2330; color: var(--bad); }
@@ -228,3 +229,12 @@ textarea.input { min-height: 90px; resize: vertical; }
 .avatar-edit .avatar::after { content: "📷"; position: absolute; right: -2px; bottom: -2px; width: 30px; height: 30px; border-radius: 50%; background: var(--card-2); border: 2px solid var(--card); display: grid; place-items: center; font-size: 0.9rem; }
 .avatar-edit .avatar { overflow: visible; }
 .avatar-edit .avatar img { border-radius: 50%; }
+
+/* ── Page color picker ────────────────────── */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; }
+.swatch { border: 2px solid transparent; border-radius: 14px; padding: 6px 4px 6px; background: var(--bg-2); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--text-2); font: inherit; font-size: .75rem; }
+.swatch .dot { width: 34px; height: 34px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.12); }
+.swatch[aria-pressed="true"] { border-color: var(--text); color: var(--text); }
+.themed .prof h1 { background: var(--magic); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.themed .prof .avatar { box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--accent), 0 14px 40px -8px var(--accent); }
+.themed .xp { border-color: color-mix(in srgb, var(--accent) 30%, transparent); }

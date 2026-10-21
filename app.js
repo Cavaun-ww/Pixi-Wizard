@@ -264,6 +264,32 @@
     });
   }
 
+  // Profile page color themes. Each sets the page glow + accent colors.
+  const THEMES = {
+    wizard: { name: "Wizard", bg: "#0b0716", g1: "168,85,247", g2: "255,95,210", magic: "linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%)", a: "#a855f7", a2: "#d8b4fe", ink: "#1a0630" },
+    ocean:  { name: "Ocean",  bg: "#04101c", g1: "34,140,255", g2: "0,220,220",   magic: "linear-gradient(120deg,#7ef9ff 0%,#22d3ee 40%,#3b82f6 100%)", a: "#3b82f6", a2: "#93e3ff", ink: "#02172b" },
+    sunset: { name: "Sunset", bg: "#160806", g1: "255,120,60", g2: "255,70,140",  magic: "linear-gradient(120deg,#ffd166 0%,#ff7a3d 45%,#ff3d8b 100%)", a: "#ff6a3d", a2: "#ffc0a0", ink: "#2b0a02" },
+    forest: { name: "Forest", bg: "#05120a", g1: "34,197,94", g2: "190,242,100",  magic: "linear-gradient(120deg,#d9f99d 0%,#4ade80 45%,#059669 100%)", a: "#22c55e", a2: "#bbf7d0", ink: "#032013" },
+    rose:   { name: "Rose",   bg: "#14060c", g1: "244,63,94", g2: "251,113,133",  magic: "linear-gradient(120deg,#fecdd3 0%,#fb7185 45%,#e11d48 100%)", a: "#f43f5e", a2: "#fecdd3", ink: "#2a0510" },
+    gold:   { name: "Gold",   bg: "#0e0b04", g1: "234,179,8", g2: "251,146,60",   magic: "linear-gradient(120deg,#fff1b8 0%,#facc15 45%,#d97706 100%)", a: "#eab308", a2: "#fde68a", ink: "#231803" },
+    neon:   { name: "Neon",   bg: "#050807", g1: "57,255,20", g2: "0,255,200",    magic: "linear-gradient(120deg,#e6ff3c 0%,#39ff14 45%,#00ffc8 100%)", a: "#39ff14", a2: "#b6ffa8", ink: "#021402" },
+    ice:    { name: "Ice",    bg: "#070b12", g1: "148,197,255", g2: "226,232,240", magic: "linear-gradient(120deg,#ffffff 0%,#c7e3ff 45%,#7dd3fc 100%)", a: "#7dd3fc", a2: "#e0f2fe", ink: "#0a1a2a" },
+    mono:   { name: "Mono",   bg: "#0a0a0a", g1: "255,255,255", g2: "160,160,160", magic: "linear-gradient(120deg,#ffffff 0%,#d4d4d4 50%,#8a8a8a 100%)", a: "#e5e5e5", a2: "#f5f5f5", ink: "#111111" },
+  };
+  function applyTheme(key) {
+    const t = THEMES[key] || THEMES.wizard, r = document.documentElement.style;
+    r.setProperty("--bg", t.bg);
+    r.setProperty("--magic", t.magic);
+    r.setProperty("--accent", t.a);
+    r.setProperty("--accent-2", t.a2);
+    r.setProperty("--accent-ink", t.ink);
+    r.setProperty("--pink", t.a2);
+    document.body.style.backgroundImage =
+      "radial-gradient(900px 520px at 15% -120px, rgba(" + t.g1 + ",.34) 0%, transparent 70%)," +
+      "radial-gradient(700px 420px at 95% 0px, rgba(" + t.g2 + ",.20) 0%, transparent 70%)";
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.bg;
+  }
+
   // a little celebration
   function confetti(n) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -284,6 +310,6 @@
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
     getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
-    renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg,
+    renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme,
   };
 })();

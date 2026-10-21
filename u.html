@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261020-3">
+<link rel="stylesheet" href="styles.css?v=20261020-5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261020-3"></script>
-<script src="app.js?v=20261020-3"></script>
+<script src="config.js?v=20261020-5"></script>
+<script src="app.js?v=20261020-5"></script>
 <style>
   .prof { text-align: center; padding: 30px 0 34px; }
   .prof .avatar { width: 110px; height: 110px; margin: 0 auto 14px; font-size: 2.6rem; }
@@ -34,13 +34,15 @@
   const box = $("content");
 
   const { data: p } = handle
-    ? await sb.from("profiles").select("id, handle, display_name, bio, avatar_path").eq("handle", handle).maybeSingle()
+    ? await sb.from("profiles").select("id, handle, display_name, bio, avatar_path, theme").eq("handle", handle).maybeSingle()
     : { data: null };
   if (!p) {
     box.innerHTML = '<div class="empty"><h2>Page not found</h2><p class="muted" style="margin:8px 0 18px">There\'s no page at this link.</p><a class="btn btn-primary" href="index.html">Go home</a></div>';
     return;
   }
 
+  App.applyTheme(p.theme);
+  document.body.classList.add("themed");
   const name = p.display_name || "@" + p.handle;
   document.title = name + " · " + App.C.SITE_NAME;
   const { data: xs } = await sb.from("experiences")
