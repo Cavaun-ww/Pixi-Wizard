@@ -33,6 +33,6 @@ window.APP_CONFIG = {
   EXPLORE_LIMIT: 40,
 
   // Upload limits (also enforced by the storage bucket settings in schema.sql)
-  MAX_VIDEO_MB: 20, // free Supabase plan has 1 GB total — keeps room for ~50 uploads
+  MAX_VIDEO_MB: 10, // keeps storage and viewing bandwidth costs down
   MAX_IMAGE_MB: 10,
 };
