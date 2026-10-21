@@ -7,6 +7,9 @@
     auth: { persistSession: true, autoRefreshToken: true },
   });
 
+  // If the browser restores a page from its back/forward cache, reload it so it never sits on "Loading…"
+  window.addEventListener("pageshow", (e) => { if (e.persisted) location.reload(); });
+
   const BUCKET = "ar";
   const siteRoot = location.origin + location.pathname.replace(/[^/]*$/, ""); // folder the site lives in
 
@@ -42,7 +45,8 @@
   async function requireAuth() {
     const s = await getSession();
     if (!s) {
-      location.href = "auth.html?next=" + encodeURIComponent(location.pathname.split("/").pop() + location.search);
+      // replace() so the sign-in page takes this page's place in history: Back goes to where you came from
+      location.replace("auth.html?next=" + encodeURIComponent(location.pathname.split("/").pop() + location.search));
       return new Promise(() => {}); // stop the page
     }
     return s;
@@ -88,7 +92,7 @@
   // onDone() runs once the server has confirmed the subscription with PayPal.
   async function openUpgrade(onDone) {
     const s = await getSession();
-    if (!s) { location.href = "auth.html?next=" + encodeURIComponent("dashboard.html?upgrade=1"); return; }
+    if (!s) { location.replace("auth.html?next=" + encodeURIComponent("dashboard.html?upgrade=1")); return; }
     if (/YOUR-/.test(C.PAYPAL_CLIENT_ID + C.PAYPAL_PLAN_ID)) {
       toast("✨ Pro subscriptions are coming soon! Check back shortly.");
       return;
