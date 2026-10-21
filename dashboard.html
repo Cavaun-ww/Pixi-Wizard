@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261020-8">
+<link rel="stylesheet" href="styles.css?v=20261021-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261020-8"></script>
-<script src="app.js?v=20261020-8"></script>
+<script src="config.js?v=20261021-1"></script>
+<script src="app.js?v=20261021-1"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -49,6 +49,12 @@
       </label>
       <label class="field"><span>Display name</span><input class="input" id="display_name" maxlength="60" placeholder="Your name or brand"></label>
       <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="A line about you"></textarea></label>
+      <details class="collapse" id="colors-box">
+        <summary>
+          <span class="sum-left">🎨 <span>Page colors</span></span>
+          <span class="sum-right"><span class="mini" id="mini-accent"></span><span class="mini" id="mini-bg"></span><span class="chev">⌄</span></span>
+        </summary>
+        <div class="collapse-body stack">
       <div class="field">
         <span>Accent color</span>
         <div class="swatches" id="swatches"></div>
@@ -64,6 +70,8 @@
         <div class="bg-preview" id="bg-preview"></div>
         <span class="small muted" style="display:block;margin-top:6px">Tap to preview, then Save profile. <a href="#" id="see-page">See my page ↗</a></span>
       </div>
+        </div>
+      </details>
       <div class="row">
         <button class="btn btn-primary" type="submit" id="save">Save profile</button>
         <button class="btn btn-ghost" type="button" id="share-page" hidden>Share my page</button>
@@ -186,6 +194,9 @@
     updatePreview();
   }
   function updatePreview() {
+    $("mini-accent").style.background = App.THEMES[chosenTheme].magic;
+    const bs = getComputedStyle(document.body);
+    $("mini-bg").style.background = bgImage ? "center/cover url('" + App.publicUrl(bgImage) + "')" : (bs.backgroundImage !== "none" ? bs.backgroundImage + ", " : "") + bs.backgroundColor;
     const el = $("bg-preview");
     el.style.background = getComputedStyle(document.body).backgroundImage + ", " + getComputedStyle(document.body).backgroundColor;
     el.style.backgroundSize = "cover"; el.style.backgroundPosition = "center";

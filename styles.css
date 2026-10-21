@@ -264,3 +264,15 @@ textarea.input { min-height: 90px; resize: vertical; }
 .light-bg .prof { background: rgba(12, 8, 26, .86); border-color: rgba(0,0,0,.08); box-shadow: 0 20px 50px -20px rgba(0,0,0,.45); }
 .light-bg .site-header { background: rgba(10, 6, 22, .88); }
 .light-bg .footer { background: rgba(10, 6, 22, .88); }
+
+/* ── Collapsible section ──────────────────── */
+.collapse { border: 1px solid var(--line-2); border-radius: 16px; background: var(--bg-2); }
+.collapse > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; font-size: .98rem; color: var(--text); -webkit-user-select: none; user-select: none; }
+.collapse > summary::-webkit-details-marker { display: none; }
+.collapse .sum-left { display: flex; align-items: center; gap: 10px; }
+.collapse .sum-right { display: flex; align-items: center; gap: 6px; }
+.collapse .mini { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); background-size: cover; }
+.collapse .chev { margin-left: 6px; font-size: 1.1rem; color: var(--text-2); transition: transform .2s; display: inline-block; line-height: 1; }
+.collapse[open] .chev { transform: rotate(180deg); }
+.collapse-body { padding: 4px 16px 18px; border-top: 1px solid var(--line); }
+.collapse-body > .field:first-child { margin-top: 14px; }
