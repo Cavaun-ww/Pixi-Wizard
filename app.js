@@ -7,9 +7,6 @@
     auth: { persistSession: true, autoRefreshToken: true },
   });
 
-  // If the browser restores a page from its back/forward cache, reload it so it never sits on "Loading…"
-  window.addEventListener("pageshow", (e) => { if (e.persisted) location.reload(); });
-
   const BUCKET = "ar";
   const siteRoot = location.origin + location.pathname.replace(/[^/]*$/, ""); // folder the site lives in
 
