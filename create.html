@@ -248,10 +248,38 @@
   }
 
   // ── publish ──────────────────────────────────────────────────
+  let lastMsg = "";
   function progress(pct, msg) {
+    pct = Math.max(0, Math.min(100, pct));
     $("progress-wrap").hidden = false;
-    $("bar").style.width = Math.max(0, Math.min(100, pct)) + "%";
-    if (msg) $("progress-msg").textContent = msg;
+    $("bar").style.width = pct + "%";
+    if (msg) lastMsg = msg;
+    $("progress-msg").textContent = lastMsg + (pct < 100 ? " " + Math.floor(pct) + "%" : "");
+  }
+
+  // upload with live progress (so people see "Uploading video… 70%")
+  async function uploadWithProgress(path, body, type, onPct) {
+    const { data } = await sb.auth.getSession();
+    const token = data.session ? data.session.access_token : C.SUPABASE_ANON_KEY;
+    const url = C.SUPABASE_URL + "/storage/v1/object/" + App.BUCKET + "/" + path.split("/").map(encodeURIComponent).join("/");
+    return new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open("POST", url);
+      x.setRequestHeader("Authorization", "Bearer " + token);
+      x.setRequestHeader("apikey", C.SUPABASE_ANON_KEY);
+      x.setRequestHeader("Content-Type", type);
+      x.setRequestHeader("cache-control", "max-age=31536000");
+      x.setRequestHeader("x-upsert", "false");
+      x.upload.onprogress = (e) => { if (e.lengthComputable) onPct(e.loaded / e.total); };
+      x.onload = () => {
+        if (x.status >= 200 && x.status < 300) return resolve();
+        let m = "Upload failed (" + x.status + ")";
+        try { const j = JSON.parse(x.responseText); m = j.message || j.error || m; } catch (_) {}
+        reject(new Error(m));
+      };
+      x.onerror = () => reject(new Error("Failed to fetch"));
+      x.send(body);
+    });
   }
 
   let Compiler = null;
@@ -293,19 +321,18 @@
         ? (vid.gif ? "gif" : ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[vid.file.type])
         : (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
       const files = [
-        { path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading photo…", pct: 58 },
-        { path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", pct: 62 },
-        { path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file, type: vid.gif ? "image/gif" : (vid.file.type || "video/mp4"), msg: vid.gif ? "Uploading GIF…" : isPic ? "Uploading overlay photo…" : "Uploading video… (larger videos take longer)", pct: 66 },
+        { path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading photo…", pct: 56, to: 60 },
+        { path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", pct: 60, to: 64 },
+        { path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file, type: vid.gif ? "image/gif" : (vid.file.type || "video/mp4"), msg: vid.gif ? "Uploading GIF…" : isPic ? "Uploading overlay photo…" : "Uploading video…", pct: 64, to: 94 },
       ];
       for (const f of files) {
         progress(f.pct, f.msg);
-        const { error } = await sb.storage.from(App.BUCKET).upload(f.path, f.body, { contentType: f.type, cacheControl: "31536000", upsert: false });
-        if (error) throw error;
+        await uploadWithProgress(f.path, f.body, f.type, (r) => progress(f.pct + (f.to - f.pct) * r, null));
         uploaded.push(f.path);
       }
 
       // 4. save the experience
-      progress(95, "Creating…");
+      progress(95, "Almost done…");
       const { data: row, error } = await sb.from("experiences").insert({
         owner: uid,
         title: $("title").value.trim().slice(0, 80),
