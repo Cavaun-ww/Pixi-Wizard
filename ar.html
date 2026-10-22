@@ -357,7 +357,7 @@ body.desktop #target-img { max-height:26vh; }
     return v;
   }
 
-  // ── video overlay: plane sized to the photo, video cropped to cover it ──
+  // ── overlay: keeps its own shape, fitted inside the photo ──
   if (typeof AFRAME !== "undefined") {
     AFRAME.registerComponent("video-overlay", {
       schema: { idx: { type: "int", default: 0 } },
@@ -382,9 +382,10 @@ body.desktop #target-img { max-height:26vh; }
         }
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
-        if (vidA > imgA) { texture.repeat.x = imgA / vidA; texture.offset.x = (1 - texture.repeat.x) / 2; }
-        else { texture.repeat.y = vidA / imgA; texture.offset.y = (1 - texture.repeat.y) / 2; }
-        var geo = new THREE.PlaneGeometry(1, 1 / imgA);
+        // keep the overlay's own shape (landscape stays landscape), fitted inside the photo and centered
+        var pw = 1, ph = 1 / vidA;
+        if (vidA < imgA) { ph = 1 / imgA; pw = ph * vidA; }
+        var geo = new THREE.PlaneGeometry(pw, ph);
         var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0 });
         this.el.setObject3D("vid", new THREE.Mesh(geo, mat));
         this.mat = mat;
