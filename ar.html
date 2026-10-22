@@ -260,6 +260,57 @@ body.desktop #target-img { max-height:26vh; }
   })();
 
   function isPhoto(x) { return /\.(jpe?g|png|webp)$/i.test(x.video_path || ""); }
+  function isGif(x) { return /\.gif$/i.test(x.video_path || ""); }
+  function isVideo(x) { return !isPhoto(x) && !isGif(x); }
+
+  // ── animated GIF player: decodes the GIF and draws its frames onto a canvas ──
+  var gifLib = null;
+  function GifPlayer(url, canvas) {
+    var self = this, ctx = canvas.getContext("2d"), tmp = document.createElement("canvas"), tctx = tmp.getContext("2d");
+    self.ready = false; self.changed = false;
+    var frames = [], i = -1, wait = 0, prev = null;
+    (gifLib || (gifLib = import("https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm")))
+      .then(function (lib) {
+        if (!lib.parseGIF && lib.default) lib = lib.default; // works with either export style
+        return fetch(url).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+          var gif = lib.parseGIF(buf);
+          frames = lib.decompressFrames(gif, false);
+          canvas.width = gif.lsd.width || 1; canvas.height = gif.lsd.height || 1;
+          self.ready = frames.length > 0;
+          self.step(0);
+        });
+      })
+      .catch(function (e) { console.warn("GIF failed", e); });
+    function draw(f) {
+      // undo the previous frame if it asked to be cleared
+      if (prev && prev.disposalType === 2) ctx.clearRect(prev.dims.left, prev.dims.top, prev.dims.width, prev.dims.height);
+      if (i === 0) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      var d = f.dims, px = f.pixels, ct = f.colorTable, ti = f.transparentIndex;
+      tmp.width = d.width; tmp.height = d.height;
+      var img = tctx.createImageData(d.width, d.height), a = img.data;
+      for (var k = 0, n = px.length; k < n; k++) {
+        var c = px[k];
+        if (c === ti) continue; // leave transparent
+        var col = ct[c], o = k * 4;
+        if (!col) continue;
+        a[o] = col[0]; a[o + 1] = col[1]; a[o + 2] = col[2]; a[o + 3] = 255;
+      }
+      tctx.putImageData(img, 0, 0);
+      ctx.drawImage(tmp, d.left, d.top);
+      prev = f; self.changed = true;
+    }
+    self.step = function (dt) {
+      if (!self.ready) return;
+      wait -= dt;
+      var guard = 0;
+      while (wait <= 0 && guard++ < 5) {
+        i = (i + 1) % frames.length;
+        draw(frames[i]);
+        wait += Math.max(frames[i].delay || 100, 20);
+      }
+      if (wait <= 0) wait = 0;
+    };
+  }
 
   // tappable label at the top: who made this → their page
   var npTimer = null;
@@ -313,11 +364,16 @@ body.desktop #target-img { max-height:26vh; }
       init: function () {
         var idx = this.data.idx, xp = xps[idx];
         if (!xp) return;
-        var photo = isPhoto(xp);
-        var video = photo ? null : makeVideo(idx);
+        var photo = isPhoto(xp), gif = isGif(xp);
+        var video = isVideo(xp) ? makeVideo(idx) : null;
         var imgA = xp.image_aspect || 1, vidA = xp.video_aspect || 16 / 9;
         var texture;
-        if (photo) {
+        if (gif) {
+          var cv = document.createElement("canvas"); cv.width = cv.height = 2;
+          this.gif = new GifPlayer(pub(xp.video_path), cv);
+          texture = new THREE.CanvasTexture(cv);
+          this.gifTex = texture;
+        } else if (photo) {
           var loader = new THREE.TextureLoader();
           loader.setCrossOrigin("anonymous");
           texture = loader.load(pub(xp.video_path));
@@ -340,7 +396,7 @@ body.desktop #target-img { max-height:26vh; }
           currentIdx = idx;
           $("scan-hint").classList.remove("show");
           showCreator(xp);
-          if (!video) return; // photo overlay: nothing to play
+          if (!video) return; // photo or GIF overlay: no sound to start
           video._wanted = true;
           video.play().catch(function () {
             // sound blocked by the browser → play muted and offer a tap-for-sound button
@@ -356,8 +412,12 @@ body.desktop #target-img { max-height:26vh; }
           $("scan-hint").classList.add("show");
         });
       },
-      tick: function () {
+      tick: function (t, dt) {
         if (!this.mat) return;
+        if (this.gif && this.visible) {
+          this.gif.step(dt || 16);
+          if (this.gif.changed) { this.gif.changed = false; this.gifTex.needsUpdate = true; }
+        }
         this.mat.opacity += ((this.visible ? 1 : 0) - this.mat.opacity) * 0.2; // quick fade in/out
       },
       remove: function () { this.el.removeObject3D("vid"); },
@@ -390,7 +450,7 @@ body.desktop #target-img { max-height:26vh; }
     $("scan-hint").textContent = isExplore ? "Point at any photo from Explore" : "Point at the image";
     $("scan-hint").classList.add("show");
 
-    if (xps.length === 1 && !isPhoto(xps[0])) {
+    if (xps.length === 1 && isVideo(xps[0])) {
       // "unlock" playback with sound while we're still inside the tap (needed on iPhone)
       var v0 = makeVideo(0);
       var unlock = v0.play();
