@@ -102,7 +102,7 @@
       bg.innerHTML =
         '<div class="modal" style="text-align:center">' +
           '<img src="logo-mark.png" alt="" style="width:84px;margin:0 auto 6px"><span class="pill pro">Pro</span>' +
-          '<h2 style="margin:12px 0 4px">Unlimited AR experiences</h2>' +
+          '<h2 style="margin:12px 0 4px">30 AR experiences every month</h2>' +
           '<p class="muted" style="margin-bottom:14px">Cancel anytime. Everything you upload stays live.</p>' +
           '<div style="font-size:2rem;margin-bottom:16px">' + esc(C.PRO_PRICE_LABEL) + ' <span class="muted" style="font-size:1rem">/ ' + esc(C.PRO_PRICE_PERIOD) + "</span></div>" +
           '<div id="paypal-buttons" style="min-height:110px"><p class="small muted" style="padding:30px 0">Loading PayPal…</p></div>' +

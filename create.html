@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261021-5">
+<link rel="stylesheet" href="styles.css?v=20261022-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261021-5"></script>
-<script src="app.js?v=20261021-5"></script>
+<script src="config.js?v=20261022-1"></script>
+<script src="app.js?v=20261022-1"></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -35,7 +35,7 @@
   <div id="paywall" class="card" hidden style="text-align:center">
     <img src="logo-mark.png" alt="" style="width:96px;margin:0 auto">
     <h2 style="margin:10px 0 6px">Your free spell is used up</h2>
-    <p class="muted" style="margin-bottom:22px">Go Pro to create unlimited experiences. Everything you've already made stays live on your page.</p>
+    <p class="muted" style="margin-bottom:22px" id="paywall-msg">Go Pro to create 30 new AR experiences every month. Everything you've already made stays live on your page.</p>
     <div class="price" style="font-size:2rem;margin-bottom:18px"><span class="js-price"></span> <small class="muted" style="font-size:1rem">/ <span class="js-period"></span></small></div>
     <button class="btn btn-primary btn-lg btn-block" id="upgrade-btn">Upgrade to Pro</button>
     <a class="btn btn-ghost btn-block" style="margin-top:10px" href="dashboard.html">Back to my page</a>
@@ -157,9 +157,20 @@
     return;
   }
   $("loading").hidden = true;
-  if (!plan.can_create) { $("paywall").hidden = false; return; }
+  // Pro who used this month's 30: friendly "come back on the 1st" instead of the upgrade pitch
+  function showLimit() {
+    const when = new Date(plan.resets_on).toLocaleDateString(undefined, { month: "long", day: "numeric" });
+    $("paywall").querySelector("h2").textContent = "You made " + plan.monthly_limit + " this month!";
+    $("paywall-msg").textContent = "That's this month's Pro limit. New ones unlock on " + when + ". Everything you've made stays live on your page.";
+    $("paywall").querySelector(".price").hidden = true;
+    $("upgrade-btn").hidden = true;
+  }
+  if (!plan.can_create) { if (plan.is_pro) showLimit(); $("paywall").hidden = false; return; }
   $("creator").hidden = false;
   (plan.is_pro ? $("pro-pill") : $("free-pill")).hidden = false;
+  if (plan.is_pro && !plan.lifetime && plan.free_used && plan.monthly_limit) {
+    $("pro-pill").textContent = "Pro · " + plan.month_used + " of " + plan.monthly_limit + " this month";
+  }
 
   // ── page name: assigned once from the email, can't be changed ──
   let handle = profile && profile.handle;
@@ -525,7 +536,7 @@
       console.error(e);
       if (uploaded.length) sb.storage.from(App.BUCKET).remove(uploaded); // tidy up partial uploads
       const denied = /row-level security|violates|403|Unauthorized/i.test(e.message || "");
-      if (denied) { $("creator").hidden = true; $("paywall").hidden = false; return; }
+      if (denied) { if (plan.is_pro) showLimit(); $("creator").hidden = true; $("paywall").hidden = false; return; }
       App.toast(e.message || "Something went wrong", true);
       btn.textContent = "Create";
       busy = false; refresh();

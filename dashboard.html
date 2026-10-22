@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261021-5">
+<link rel="stylesheet" href="styles.css?v=20261022-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261021-5"></script>
-<script src="app.js?v=20261021-5"></script>
+<script src="config.js?v=20261022-1"></script>
+<script src="app.js?v=20261022-1"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -308,10 +308,11 @@
     } else if (p.is_pro) {
       const canceled = p.status === "cancelled";
       line.innerHTML = '<span class="pill pro">Pro</span>' +
-        (canceled ? '<span class="pill warn">Canceled</span>' : '<span class="muted small">Unlimited experiences · PayPal</span>');
+        (canceled ? '<span class="pill warn">Canceled</span>' : '<span class="muted small">' + (p.month_used || 0) + ' of ' + (p.monthly_limit || 30) + ' used this month · PayPal</span>');
       note.textContent = canceled
         ? (p.period_end ? "Pro stays on until " + date(p.period_end) + ". Resubscribe anytime." : "")
         : (p.period_end ? "Next payment " + date(p.period_end) : "") + (p.payer_email ? " · " + p.payer_email : "");
+      if (p.resets_on && !canceled) note.textContent += (note.textContent ? " · " : "") + "New month starts " + date(p.resets_on);
       $("upgrade").hidden = !canceled;
       $("manage").hidden = canceled;
     } else {
