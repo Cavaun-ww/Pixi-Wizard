@@ -110,7 +110,7 @@ body.desktop #target-img { max-height:26vh; }
     <div class="steps">
       <div class="step"><span class="n">1</span><span>Tap <b>Start AR camera</b> and allow camera access</span></div>
       <div class="step"><span class="n">2</span><span id="step2">Point your phone at <b>the image above</b></span></div>
-      <div class="step"><span class="n">3</span><span>✨ The <b>video</b> plays right on top of it</span></div>
+      <div class="step"><span class="n">3</span><span id="step3">✨ Watch it <b>come to life</b> right on top of it</span></div>
     </div>
     <div class="new-banner" id="new-banner" hidden>🎉 Abracadabra, it's live! Point your camera at your photo to see it.</div>
     <button id="start-btn" disabled>Loading…</button>
@@ -249,6 +249,9 @@ body.desktop #target-img { max-height:26vh; }
       $("by").innerHTML = 'by <a href="u.html?h=' + encodeURIComponent(p.handle) + '"></a>';
       $("by").querySelector("a").textContent = byName(xp);
     }
+    $("step3").innerHTML = isGif(xp) ? "✨ The <b>GIF</b> plays right on top of it"
+      : isPhoto(xp) ? "✨ The <b>photo</b> appears right on top of it"
+      : "✨ The <b>video</b> plays right on top of it";
     $("target-img").src = pub(xp.image_path);
     $("target-img").hidden = false;
     if (isNew) {
