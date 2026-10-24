@@ -114,17 +114,12 @@ body.desktop #target-img { max-height:26vh; }
 #c-post { padding:10px 16px; border-radius:999px; border:0; background:var(--magic); color:#fff; font:inherit; font-weight:500; cursor:pointer; }
 #c-post:disabled { opacity:.5; }
 #c-form[hidden] { display:none; }
-.pro-pop { position:fixed; inset:0; z-index:200; display:grid; place-items:end center; background:rgba(5,3,12,.6); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); animation:fadeIn .2s; }
-.pro-pop[hidden] { display:none; }
-.pro-pop .sheet { width:min(420px,100%); margin:0 0 max(16px, env(safe-area-inset-bottom)); padding:24px 22px 18px; border-radius:24px; background:#170f2c; border:1px solid #3d2f66; text-align:center; box-shadow:0 -10px 50px rgba(168,85,247,.25); animation:slideUp .25s ease; }
-@media (min-width:600px) { .pro-pop { place-items:center; } }
-.pro-pop img { width:70px; margin:0 auto 4px; display:block; }
-.pro-pop h3 { font-family:"Fredoka",sans-serif; font-weight:500; font-size:1.35rem; margin:4px 0 6px; }
-.pro-pop p { color:var(--text-2); font-size:.95rem; line-height:1.45; margin-bottom:18px; }
-.pro-pop .go { display:block; width:100%; padding:14px; border-radius:999px; border:0; background:var(--magic); color:#fff; font:inherit; font-weight:500; font-size:1rem; cursor:pointer; text-decoration:none; }
-.pro-pop .later { display:block; width:100%; margin-top:8px; padding:12px; border:0; background:none; color:var(--muted); font:inherit; cursor:pointer; }
-@keyframes fadeIn { from { opacity:0 } }
-@keyframes slideUp { from { transform:translateY(40px); opacity:0 } }
+.need { display:block; font-size:.82rem; color:#ff7b8a; text-align:center; margin:-8px 0 14px; min-height:0; opacity:0; max-height:0; overflow:hidden; transition:opacity .2s, max-height .2s; }
+.need.show { opacity:1; max-height:60px; }
+.need a { color:#ff9fb0; font-weight:500; }
+.nope { border-color:#ff6b7a !important; animation: nope .35s; }
+#c-input.nope { border-color:#ff6b7a; }
+@keyframes nope { 20%,60% { transform:translateX(-4px) } 40%,80% { transform:translateX(4px) } }
 .cm { display:flex; gap:10px; padding:10px 0; border-top:1px solid #1f1838; }
 .cm .av { width:32px; height:32px; border-radius:50%; flex:0 0 auto; overflow:hidden; display:grid; place-items:center; background:var(--magic); color:#1a0630; font-weight:600; font-size:.85rem; text-decoration:none; }
 .cm .av img { width:100%; height:100%; object-fit:cover; }
@@ -170,22 +165,15 @@ body.desktop #target-img { max-height:26vh; }
         <button type="button" id="like-btn" aria-pressed="false"><span class="heart">♡</span> <span id="like-n">0</span></button>
         <a id="msg-btn" href="#" hidden>💬 Message</a>
       </div>
+      <div class="need" id="soc-need"></div>
       <div class="comments">
         <h3>Comments <span id="c-n" class="muted-n"></span></h3>
         <form id="c-form" hidden>
           <textarea id="c-input" rows="1" maxlength="500" placeholder="Add a comment…"></textarea>
           <button type="submit" id="c-post">Post</button>
         </form>
+        <div class="need" id="c-need" style="margin-top:-6px;text-align:left"></div>
         <div id="c-list"></div>
-      </div>
-    </div>
-    <div class="pro-pop" id="pro-pop" hidden role="dialog" aria-modal="true">
-      <div class="sheet">
-        <img src="logo-mark.png" alt="">
-        <h3 id="pp-title">✨ That's a Pro perk</h3>
-        <p id="pp-text"></p>
-        <a class="go" id="pp-go" href="dashboard.html?upgrade=1">Go Pro</a>
-        <button class="later" id="pp-later" type="button">Not now</button>
       </div>
     </div>
     <div class="desk" id="desk">
@@ -508,18 +496,18 @@ body.desktop #target-img { max-height:26vh; }
     if (s < 86400) return Math.floor(s / 3600) + "h"; if (s < 604800) return Math.floor(s / 86400) + "d";
     return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
-  function popup(title, text, btn, href) {
-    $("pp-title").textContent = title; $("pp-text").textContent = text;
-    $("pp-go").textContent = btn; $("pp-go").href = href;
-    $("pro-pop").hidden = false;
+  // red hint right where the person tapped (no popup)
+  var needTimer = {};
+  function flag(el, box, html) {
+    if (el) { el.classList.remove("nope"); void el.offsetWidth; el.classList.add("nope"); setTimeout(function () { el.classList.remove("nope"); }, 2500); }
+    var n = $(box); n.innerHTML = html; n.classList.add("show");
+    clearTimeout(needTimer[box]); needTimer[box] = setTimeout(function () { n.classList.remove("show"); }, 4000);
   }
-  $("pp-later").onclick = function () { $("pro-pop").hidden = true; };
-  $("pro-pop").onclick = function (e) { if (e.target === this) this.hidden = true; };
-  function needSignIn() {
-    popup("Join the fun ✨", "Sign in to like, comment and message creators.", "Sign in", "auth.html?next=" + encodeURIComponent("ar.html?x=" + post.slug));
+  function needSignIn(el, box) {
+    flag(el, box || "soc-need", '<a href="auth.html?next=' + encodeURIComponent("ar.html?x=" + post.slug) + '">Sign in</a> to like, comment and message');
   }
-  function needPro(what) {
-    popup("✨ " + what + " is a Pro perk", "Go Pro to like, comment and message creators — plus make 30 new AR experiences every month.", "Go Pro · " + (C.PRO_PRICE_LABEL || "$9.99") + "/month", "dashboard.html?upgrade=1");
+  function needPro(what, el, box) {
+    flag(el, box || "soc-need", what + ' is for Pro members · <a href="dashboard.html?upgrade=1">Go Pro</a>');
   }
   // small, soft note that fades away on its own
   var softTimer;
@@ -542,15 +530,15 @@ body.desktop #target-img { max-height:26vh; }
       $("msg-btn").textContent = "💬 Message " + (p.display_name || "@" + p.handle);
       $("msg-btn").href = "messages.html?to=" + encodeURIComponent(p.handle);
       $("msg-btn").onclick = function (e) {
-        if (!me) { e.preventDefault(); needSignIn(); }
-        else if (!isPro) { e.preventDefault(); needPro("Messaging"); }
+        if (!me) { e.preventDefault(); needSignIn(this); }
+        else if (!isPro) { e.preventDefault(); needPro("Messaging", this); }
       };
     }
     // everyone sees the comment box; tapping it explains what's needed
     $("c-form").hidden = false;
     $("c-input").addEventListener("focus", function () {
-      if (!me) { this.blur(); needSignIn(); }
-      else if (!isPro) { this.blur(); needPro("Commenting"); }
+      if (!me) { this.blur(); needSignIn(this, "c-need"); }
+      else if (!isPro) { this.blur(); needPro("Commenting", this, "c-need"); }
     });
     loadLikes(); loadComments();
   }
@@ -565,9 +553,9 @@ body.desktop #target-img { max-height:26vh; }
   }
   function setLiked(on) { $("like-btn").classList.toggle("on", on); $("like-btn").setAttribute("aria-pressed", on); $("like-btn").querySelector(".heart").textContent = on ? "♥" : "♡"; }
   $("like-btn").onclick = async function () {
-    if (!me) return needSignIn();
+    if (!me) return needSignIn(this);
     var on = !this.classList.contains("on"), n = +$("like-n").textContent;
-    if (on && !isPro) return needPro("Liking");
+    if (on && !isPro) return needPro("Liking", this);
     setLiked(on); $("like-n").textContent = Math.max(0, n + (on ? 1 : -1));
     if (on) { this.classList.remove("pop"); void this.offsetWidth; this.classList.add("pop"); }
     var r = on ? await sb.from("likes").insert({ user_id: me, experience_id: post.id })
@@ -607,9 +595,9 @@ body.desktop #target-img { max-height:26vh; }
     var b = e.target.closest("button[data-act]"); if (!b) return;
     var row = b.closest(".cm"), id = row.getAttribute("data-id"), act = b.getAttribute("data-act");
     if (act === "clike") {
-      if (!me) return needSignIn();
+      if (!me) return needSignIn(b, "c-need");
       var on = !b.classList.contains("on"), n = +b.getAttribute("data-n") + (on ? 1 : -1);
-      if (on && !isPro) return needPro("Liking");
+      if (on && !isPro) return needPro("Liking comments", b, "c-need");
       b.classList.toggle("on", on); b.setAttribute("data-n", n);
       b.innerHTML = '<span class="heart">' + (on ? "♥" : "♡") + '</span><span>' + (n || "") + '</span>';
       myCommentLikes[id] = on;
@@ -637,7 +625,7 @@ body.desktop #target-img { max-height:26vh; }
     var r = await sb.from("comments").insert({ experience_id: post.id, user_id: me, body: body.slice(0, 500) });
     $("c-post").disabled = false;
     if (r.error) {
-      if (/row-level/i.test(r.error.message) && !isPro) return needPro("Commenting");
+      if (/row-level/i.test(r.error.message) && !isPro) return needPro("Commenting", $("c-input"), "c-need");
       return toastMsg(/row-level/i.test(r.error.message) ? "Slow down a little, then try again" : "Didn't post. Try again");
     }
     $("c-input").value = ""; $("c-input").style.height = "";

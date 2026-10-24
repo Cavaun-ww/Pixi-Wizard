@@ -45,6 +45,11 @@
   .composer textarea:focus { border-color: var(--pink); }
   .notice { text-align: center; color: var(--text-2); font-size: .92rem; padding: 16px; border: 1px dashed var(--line); border-radius: 16px; margin: 12px 0 20px; }
   .notice .btn { margin-top: 10px; }
+  .need { font-size: .82rem; color: #ff7b8a; text-align: center; margin: -10px 0 16px; opacity: 0; max-height: 0; overflow: hidden; transition: opacity .2s, max-height .2s; }
+  .need.show { opacity: 1; max-height: 60px; }
+  .need a { color: #ff9fb0; font-weight: 500; }
+  .composer textarea.nope { border-color: #ff6b7a; animation: nope .35s; }
+  @keyframes nope { 20%,60% { transform: translateX(-4px) } 40%,80% { transform: translateX(4px) } }
   .menu-btn { background: none; border: 1px solid var(--line); color: var(--text-2); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .82rem; cursor: pointer; }
   .menu-btn:hover { color: var(--text); border-color: var(--accent); }
 </style>
@@ -97,9 +102,17 @@
     '<div class="thread" id="thread"></div>' +
     '<div id="gate"></div>' +
     '<form class="composer" id="composer" hidden><textarea id="body" rows="1" maxlength="1000" placeholder="Message ' + esc(name) + '…"></textarea>' +
-      '<button class="btn btn-primary" id="send" type="submit">Send</button></form>';
+      '<button class="btn btn-primary" id="send" type="submit">Send</button></form><div class="need" id="need"></div>';
 
-  let blocked = false, msgs = [];
+  let blocked = false, msgs = [], needPro = false, needTimer;
+  function flagPro() {
+    const box = $("body"), n = $("need");
+    box.blur(); box.classList.remove("nope"); void box.offsetWidth; box.classList.add("nope");
+    n.innerHTML = 'Messaging is for Pro members · <a href="#" id="need-go">Go Pro</a>';
+    n.classList.add("show");
+    $("need-go").onclick = (e) => { e.preventDefault(); App.openUpgrade(); };
+    clearTimeout(needTimer); needTimer = setTimeout(() => { n.classList.remove("show"); box.classList.remove("nope"); }, 4000);
+  }
   async function refreshGate() {
     const [{ data: b }, { data: can }, plan] = await Promise.all([
       sb.from("blocks").select("blocked").eq("blocker", me).eq("blocked", them.id).maybeSingle(),
@@ -113,11 +126,15 @@
       gate.innerHTML = '<div class="notice">You blocked ' + esc(name) + ". Unblock them to send messages.</div>";
       $("composer").hidden = true;
     } else if (!can) {
-      gate.innerHTML = plan.is_pro
-        ? '<div class="notice">You can\'t message ' + esc(name) + " right now.</div>"
-        : '<div class="notice">💬 Sending messages is a <b>Pro</b> perk. Go Pro to message and reply to creators.<br><button class="btn btn-primary btn-sm" id="go-pro">✨ Go Pro</button></div>';
-      if ($("go-pro")) $("go-pro").onclick = () => App.openUpgrade();
-      $("composer").hidden = true;
+      if (plan.is_pro) {
+        gate.innerHTML = '<div class="notice">You can\'t message ' + esc(name) + " right now.</div>";
+        $("composer").hidden = true;
+      } else {
+        // free: keep the box, show a small red hint when they try to type or send
+        gate.innerHTML = "";
+        $("composer").hidden = false;
+        needPro = true;
+      }
     } else {
       gate.innerHTML = "";
       $("composer").hidden = false;
@@ -158,10 +175,12 @@
   setInterval(() => { if (!document.hidden) load(); }, 4000); // check for new messages every few seconds
 
   const box = $("body");
+  box.addEventListener("focus", () => { if (needPro) flagPro(); });
   box.addEventListener("input", () => { box.style.height = "auto"; box.style.height = Math.min(box.scrollHeight, 140) + "px"; });
   box.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !/iPhone|Android/i.test(navigator.userAgent)) { e.preventDefault(); $("composer").requestSubmit(); } });
   $("composer").onsubmit = async (e) => {
     e.preventDefault();
+    if (needPro) return flagPro();
     const body = box.value.trim();
     if (!body) return;
     $("send").disabled = true;
