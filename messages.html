@@ -40,12 +40,12 @@
   .bubble.me { align-self: flex-end; background: linear-gradient(135deg, #c04fd8, #7c4dff); color: #fff; border-bottom-right-radius: 6px; }
   .stamp { align-self: center; font-size: .72rem; color: var(--muted); margin: 8px 0 2px; }
   .seen { align-self: flex-end; font-size: .72rem; color: var(--muted); margin-top: -2px; }
-  .composer { position: sticky; bottom: 0; display: flex; gap: 8px; align-items: flex-end; padding: 12px 0 18px; background: linear-gradient(transparent, var(--bg) 30%); }
+  .composer { position: sticky; z-index: 1; bottom: 0; display: flex; gap: 8px; align-items: flex-end; padding: 12px 0 18px; background: linear-gradient(transparent, var(--bg) 30%); }
   .composer textarea { flex: 1; resize: none; min-height: 44px; max-height: 140px; padding: 11px 16px; border-radius: 22px; border: 1px solid var(--line); background: #140d26; color: var(--text); font: inherit; font-size: 16px; outline: none; }
   .composer textarea:focus { border-color: var(--pink); }
   .notice { text-align: center; color: var(--text-2); font-size: .92rem; padding: 16px; border: 1px dashed var(--line); border-radius: 16px; margin: 12px 0 20px; }
   .notice .btn { margin-top: 10px; }
-  .need { font-size: .82rem; color: #ff7b8a; text-align: center; margin: -10px 0 16px; opacity: 0; max-height: 0; overflow: hidden; transition: opacity .2s, max-height .2s; }
+  .need { position: relative; z-index: 2; line-height: 1.5; padding: 2px 0; font-size: .82rem; color: #ff7b8a; text-align: center; margin: -12px 0 16px; opacity: 0; max-height: 0; overflow: hidden; transition: opacity .2s, max-height .2s; }
   .need.show { opacity: 1; max-height: 60px; }
   .need a { color: #ff9fb0; font-weight: 500; }
   .composer textarea.nope { border-color: #ff6b7a; animation: nope .35s; }
