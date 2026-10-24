@@ -156,18 +156,9 @@
 
   // "📍 Near New York": look the place up, then sort by distance from it
   $("near-place").onclick = async () => {
-    const q = $("q").value.trim(); if (!q) return;
-    $("near-place").disabled = true; $("near-place").textContent = "Finding " + q + "…";
-    let hit = null;
-    try {
-      const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(q));
-      hit = (await r.json())[0];
-    } catch (e) {}
-    $("near-place").disabled = false; $("near-place").textContent = "📍 Near " + q;
-    if (!hit) return App.toast("Couldn't find that place. Try adding the city or state.", true);
-    const name = (hit.name || hit.display_name.split(",")[0]);
+    if (!placeHit) return;
     if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; }
-    showNear({ lat: +hit.lat, lng: +hit.lon }, "Closest to " + name + " first");
+    showNear({ lat: placeHit.lat, lng: placeHit.lng }, "Closest to " + placeHit.name + " first");
   };
 
   async function runSearch() {
@@ -188,10 +179,26 @@
   }
   function clearSearch() { $("near-place").hidden = true; $("q").value = ""; runSearch(); $("q").focus(); }
   let t;
+  // only offer "📍 Near …" when what you typed is a real place (city, town, neighborhood, state, zip)
+  let placeHit = null, placeTimer, placeRun = 0;
+  function checkPlace(v) {
+    clearTimeout(placeTimer); placeHit = null; $("near-place").hidden = true;
+    if (v.length < 3) return;
+    const run = ++placeRun;
+    placeTimer = setTimeout(async () => {
+      try {
+        const zip = /^\d{5}$/.test(v);
+        const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(v) + (zip ? "&countrycodes=us" : "&featureType=settlement");
+        const hit = (await (await fetch(url)).json())[0];
+        if (run !== placeRun || !hit) return;
+        placeHit = { lat: +hit.lat, lng: +hit.lon, name: hit.name || hit.display_name.split(",")[0] };
+        $("near-place").textContent = "📍 Near " + placeHit.name;
+        $("near-place").hidden = false;
+      } catch (e) {}
+    }, 600);
+  }
   $("q").addEventListener("input", () => {
-    const v = $("q").value.trim();
-    $("near-place").hidden = v.length < 2;
-    $("near-place").textContent = "📍 Near " + v.slice(0, 30);
+    checkPlace($("q").value.trim());
     clearTimeout(t); t = setTimeout(runSearch, 300);
   });
   $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(t); runSearch(); $("q").blur(); } });
