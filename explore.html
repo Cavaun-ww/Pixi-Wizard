@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261023-2">
+<link rel="stylesheet" href="styles.css?v=20261024-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261023-2"></script>
-<script src="app.js?v=20261023-2"></script>
+<script src="config.js?v=20261024-1"></script>
+<script src="app.js?v=20261024-1"></script>
 <style>
   .ex-hero { text-align: center; padding: 26px 0 26px; }
   .ex-hero .lead { max-width: 520px; margin: 10px auto 22px; }
@@ -35,6 +35,11 @@
   .search input::-webkit-search-cancel-button { display: none; }
   .search .ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
   .search .clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; font-size: .8rem; border-radius: 50%; border: 0; background: #2a2048; color: var(--text-2); cursor: pointer; }
+  .near-row { text-align: center; margin: -6px 0 16px; }
+  .near-btn { padding: 7px 16px; border-radius: 999px; border: 1px solid var(--line); background: #140d26; color: var(--text-2); font: inherit; font-size: .88rem; cursor: pointer; }
+  .near-btn:hover { border-color: var(--pink); color: var(--text); }
+  .near-btn.on { border-color: var(--pink); background: #3a1440; color: #fff; }
+  .tile .pin { position: absolute; left: 6px; bottom: 44px; font-size: .68rem; padding: 3px 7px; border-radius: 999px; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); max-width: calc(100% - 12px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .results-note { text-align: center; color: var(--muted); font-size: .9rem; margin: -8px 0 16px; }
 </style>
 </head>
@@ -50,6 +55,7 @@
     <input type="search" id="q" placeholder="Search" autocomplete="off" enterkeyhint="search" aria-label="Search">
     <button type="button" class="clear" id="clear" aria-label="Clear search" hidden>✕</button>
   </form>
+  <div class="near-row"><button type="button" class="near-btn" id="near">📍 Near me</button></div>
   <p class="results-note" id="note" hidden></p>
   <div id="grid"><p class="muted" style="text-align:center;padding:40px 0">Loading…</p></div>
   <div style="text-align:center;margin-top:22px"><button class="btn" id="more" hidden>Load more</button></div>
@@ -62,6 +68,7 @@
   const sb = App.sb, esc = App.esc, $ = (id) => document.getElementById(id);
   document.querySelectorAll(".js-name").forEach((e) => (e.textContent = App.C.SITE_NAME));
   const PAGE = 30;
+  const COLS = "slug, title, image_path, created_at, lat, lng, profiles!owner(handle, display_name), likes(count), comments(count)";
   let from = 0, all = [];
 
   const likes = (x) => (x.likes && x.likes[0] && x.likes[0].count) || 0;
@@ -72,6 +79,7 @@
       '<img loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
       '<span class="ar">✨ AR</span>' +
       '<span class="lk">♥ ' + likes(x) + " · 💬 " + ((x.comments && x.comments[0] && x.comments[0].count) || 0) + "</span>" +
+      (x._dist != null ? '<span class="pin">📍 ' + esc(App.distLabel(x._dist)) + "</span>" : x.lat != null ? '<span class="pin">📍</span>' : "") +
       '<span class="shade"><div class="t">' + esc(x.title) + '</div>' + (who ? '<div class="b">' + esc(who) + "</div>" : "") + "</span>" +
     "</a>";
   }
@@ -84,7 +92,7 @@
     const myRun = runId;
     $("more").disabled = true;
     let q = sb.from("experiences")
-      .select("slug, title, image_path, created_at, profiles!owner(handle, display_name), likes(count), comments(count)")
+      .select(COLS)
       .eq("is_private", false);
     if (term) {
       const ors = ["title.ilike.*" + term + "*"];
@@ -113,7 +121,32 @@
   }
   $("more").onclick = loadPage;
 
+  // ── near me: closest AR with a location first ──
+  let nearOn = false;
+  $("near").onclick = async () => {
+    if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; runSearch(); return; }
+    $("near").disabled = true; $("near").textContent = "Finding you…";
+    let me;
+    try { me = await App.hereNow(); }
+    catch (e) { $("near").disabled = false; $("near").textContent = "📍 Near me"; return App.toast(e.message, true); }
+    const myRun = ++runId;
+    $("q").value = ""; $("clear").hidden = true; term = "";
+    const { data, error } = await sb.from("experiences").select(COLS).eq("is_private", false).not("lat", "is", null).limit(500);
+    $("near").disabled = false;
+    if (myRun !== runId) return;
+    if (error) { $("near").textContent = "📍 Near me"; return App.toast("Couldn't load nearby AR.", true); }
+    nearOn = true; $("near").classList.add("on"); $("near").textContent = "📍 Near me ✕";
+    const rows = (data || []).map((x) => ({ ...x, _dist: App.milesBetween(me, { lat: x.lat, lng: x.lng }) })).sort((a, b) => a._dist - b._dist);
+    $("more").hidden = true;
+    $("note").hidden = false;
+    $("note").textContent = rows.length ? "Closest first · only AR with a location" : "";
+    $("grid").innerHTML = rows.length
+      ? '<div class="tiles">' + rows.map(card).join("") + "</div>"
+      : '<div class="empty"><p style="margin:10px 0 6px">No AR pinned on the map yet.</p><p class="muted small">Creators can add a 📍 location when they make one, or later on My page.</p></div>';
+  };
+
   async function runSearch() {
+    if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; }
     term = clean($("q").value);
     $("clear").hidden = !$("q").value;
     const myRun = ++runId;

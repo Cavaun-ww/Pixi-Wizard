@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261023-2"></script>
+<script src="config.js?v=20261024-1"></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -137,6 +137,15 @@ body.desktop #target-img { max-height:26vh; }
 .c-empty { color:var(--muted); font-size:.9rem; padding:8px 0 4px; }
 #soft-note { position:fixed; left:50%; bottom:max(24px, env(safe-area-inset-bottom)); transform:translate(-50%, 12px); z-index:300; padding:9px 16px; border-radius:999px; background:rgba(29,21,56,.92); border:1px solid #3d2f66; color:var(--text-2); font-size:.85rem; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
 #soft-note.show { opacity:1; transform:translate(-50%, 0); }
+.where { margin-top:20px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:#140d26; text-align:left; }
+.where-map { height:160px; background:#1a1430; }
+.where-row { display:flex; align-items:center; gap:12px; padding:12px 14px; }
+.where-name { flex:1; min-width:0; display:flex; flex-direction:column; }
+.where-name b { font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.where-name span { font-size:.8rem; color:var(--muted); }
+.where-go { flex:0 0 auto; padding:9px 16px; border-radius:999px; background:var(--magic); color:#fff; text-decoration:none; font-size:.9rem; font-weight:500; }
+.pw-pin { font-size:30px; line-height:34px; text-align:center; background:none; border:0; filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.leaflet-container { font:inherit; }
 </style>
 </head>
 <body>
@@ -159,6 +168,13 @@ body.desktop #target-img { max-height:26vh; }
     <div class="after">
       <button id="share-btn" type="button">🔗 Share this AR</button>
       <a id="mypage-link" href="dashboard.html" hidden>My page</a>
+    </div>
+    <div class="where" id="where" hidden>
+      <div class="where-map" id="where-map"></div>
+      <div class="where-row">
+        <div class="where-name"><b id="where-name"></b><span id="where-sub">Go here to scan the real photo</span></div>
+        <a class="where-go" id="where-go" target="_blank" rel="noopener">Directions</a>
+      </div>
     </div>
     <div class="social" id="social" hidden>
       <div class="soc-bar">
@@ -263,7 +279,7 @@ body.desktop #target-img { max-height:26vh; }
   // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
-    var cols = "id, owner, slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, profiles!owner(handle, display_name, avatar_path)";
+    var cols = "id, owner, slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, lat, lng, place_name, loc_approx, profiles!owner(handle, display_name, avatar_path)";
 
     if (isExplore) {
       document.title = "Explore · " + C.SITE_NAME;
@@ -310,6 +326,7 @@ body.desktop #target-img { max-height:26vh; }
       : isPhoto(xp) ? "✨ The <b>photo</b> appears right on top of it"
       : "✨ The <b>video</b> plays right on top of it";
     initSocial(xp);
+    if (xp.lat != null) showWhere(xp);
     $("target-img").src = pub(xp.image_path);
     $("target-img").hidden = false;
     if (isNew) {
@@ -486,6 +503,25 @@ body.desktop #target-img { max-height:26vh; }
     });
   }
 
+
+  // ── where to find it (optional location) ─────────────────
+  function showWhere(xp) {
+    $("where").hidden = false;
+    $("where-name").textContent = "📍 " + (xp.place_name || "On the map");
+    $("where-sub").textContent = xp.loc_approx ? "Approximate area · find the photo nearby" : "Go here to scan the real photo";
+    var ios = /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && "ontouchend" in document);
+    $("where-go").href = ios ? "https://maps.apple.com/?daddr=" + xp.lat + "," + xp.lng : "https://www.google.com/maps/dir/?api=1&destination=" + xp.lat + "," + xp.lng;
+    var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(css);
+    var js = document.createElement("script"); js.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+    js.onload = function () {
+      var L = window.L, map = L.map("where-map", { zoomControl: false, dragging: !isMobile, scrollWheelZoom: false, tap: false }).setView([xp.lat, xp.lng], xp.loc_approx ? 14 : 16);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+      if (xp.loc_approx) L.circle([xp.lat, xp.lng], { radius: 700, color: "#ff5fd2", weight: 2, fillColor: "#a855f7", fillOpacity: .18 }).addTo(map);
+      else L.marker([xp.lat, xp.lng], { icon: L.divIcon({ className: "pw-pin", html: "📍", iconSize: [34, 34], iconAnchor: [17, 32] }) }).addTo(map);
+    };
+    js.onerror = function () { $("where-map").hidden = true; };
+    document.head.appendChild(js);
+  }
 
   // ── likes + comments + message the creator ─────────────────
   var me = null, post = null, isPro = false;

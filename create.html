@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261023-2">
+<link rel="stylesheet" href="styles.css?v=20261024-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261023-2"></script>
-<script src="app.js?v=20261023-2"></script>
+<script src="config.js?v=20261024-1"></script>
+<script src="app.js?v=20261024-1"></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -109,6 +109,10 @@
           <span class="switch" aria-hidden="true"></span>
           <span><b>🔒 Private</b><br><span class="small muted">Hidden from Explore and your public page. Your link, QR code and the AR camera still work.</span></span>
         </label>
+        <div style="margin:4px 0 16px">
+          <button type="button" class="loc-chip" id="loc-btn">📍 <span id="loc-label">Add a location (optional)</span></button>
+          <div class="small muted" style="margin-top:6px">Let people find the real photo and scan it in person.</div>
+        </div>
         <button class="btn btn-primary btn-lg btn-block" id="publish">Create</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
@@ -417,6 +421,15 @@
   }
 
 
+  // optional location
+  let loc = null;
+  $("loc-btn").onclick = async () => {
+    const r = await App.pickLocation(loc);
+    if (r === undefined) return;
+    loc = r;
+    $("loc-label").textContent = loc ? (loc.place_name || "Location added") + (loc.loc_approx ? " (approx.)" : "") + " · change" : "Add a location (optional)";
+  };
+
   $("title").addEventListener("input", refresh);
   let busy = false;
   function refresh() { $("publish").disabled = busy; }
@@ -523,6 +536,7 @@
         image_aspect: img.w / img.h,
         video_aspect: vid.w / vid.h,
         is_private: $("is-private").checked,
+        ...(loc ? { lat: loc.lat, lng: loc.lng, place_name: loc.place_name, loc_approx: loc.loc_approx } : {}),
       }).select("slug").single();
       if (error) throw error;
       progress(100, "Done");

@@ -296,3 +296,19 @@ textarea.input { min-height: 90px; resize: vertical; }
   .site-header .brand-name { font-size: 1.02rem; }
   .site-header .brand-mark { width: 30px; height: 30px; }
 }
+
+/* location picker + maps */
+.loc-modal .modal { max-width: 480px; }
+.loc-search { display: flex; gap: 8px; }
+.loc-search .input { flex: 1; font-size: 16px; }
+.loc-results { display: grid; gap: 4px; margin-top: 6px; }
+.loc-results button { text-align: left; background: var(--bg-2); border: 1px solid var(--line); color: var(--text-2); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: .82rem; cursor: pointer; }
+.loc-results button:hover { border-color: var(--accent); color: var(--text); }
+.loc-warn { font-size: .82rem; color: #ffcf7a; background: rgba(255,194,75,.08); border: 1px solid rgba(255,194,75,.25); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+.loc-map { height: 230px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #140d26; }
+.loc-approx { display: flex; gap: 8px; align-items: center; font-size: .88rem; color: var(--text-2); margin-top: 10px; cursor: pointer; }
+.pw-pin { font-size: 30px; line-height: 34px; text-align: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); background: none; border: 0; }
+.loc-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text-2); font: inherit; font-size: .9rem; cursor: pointer; }
+.loc-chip:hover { border-color: var(--accent); color: var(--text); }
+.loc-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.leaflet-container { font: inherit; background: #1a1430; }

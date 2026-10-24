@@ -341,6 +341,136 @@
   const BG_COLORS = ["#1e1b4b", "#0c4a6e", "#134e4a", "#14532d", "#713f12", "#7c2d12", "#831843", "#3b0764", "#111827", "#f5f5f4", "#fde68a", "#fbcfe8"];
 
   // a little celebration
+
+  // ── locations: map (Leaflet + OpenStreetMap), search, "use my location" ──
+  let leafletP = null;
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve(window.L);
+    if (leafletP) return leafletP;
+    leafletP = new Promise((res, rej) => {
+      const css = document.createElement("link");
+      css.rel = "stylesheet"; css.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+      document.head.appendChild(css);
+      const js = document.createElement("script");
+      js.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+      js.onload = () => res(window.L); js.onerror = () => { leafletP = null; rej(new Error("Map didn't load")); };
+      document.head.appendChild(js);
+    });
+    return leafletP;
+  }
+  function makeMap(el, lat, lng, zoom) {
+    return loadLeaflet().then((L) => {
+      const map = L.map(el, { zoomControl: true, attributionControl: true }).setView([lat, lng], zoom || 15);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+      return { L, map };
+    });
+  }
+  const pinIcon = (L) => L.divIcon({ className: "pw-pin", html: "📍", iconSize: [34, 34], iconAnchor: [17, 32] });
+  function geoSearch(q) {
+    return fetch("https://nominatim.openstreetmap.org/search?format=json&limit=5&q=" + encodeURIComponent(q), { headers: { "Accept-Language": navigator.language || "en" } })
+      .then((r) => r.json());
+  }
+  function geoName(lat, lng) {
+    return fetch("https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&lat=" + lat + "&lon=" + lng, { headers: { "Accept-Language": navigator.language || "en" } })
+      .then((r) => r.json()).then((d) => {
+        const a = d.address || {};
+        const first = d.name || a.amenity || a.shop || a.tourism || a.building || (a.house_number && a.road ? a.house_number + " " + a.road : a.road);
+        const city = a.city || a.town || a.village || a.suburb || a.county || "";
+        return [first, city].filter(Boolean).join(", ") || (d.display_name || "").split(",").slice(0, 2).join(",");
+      }).catch(() => "");
+  }
+  function hereNow() {
+    return new Promise((res, rej) => {
+      if (!navigator.geolocation) return rej(new Error("Location isn't available on this device."));
+      navigator.geolocation.getCurrentPosition((p) => res({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        (e) => rej(new Error(e.code === 1 ? "Location permission was blocked. Allow it in your browser settings, or search instead." : "Couldn't get your location. Try searching instead.")),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+    });
+  }
+  function milesBetween(a, b) {
+    const R = 3958.8, r = (d) => d * Math.PI / 180;
+    const dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function distLabel(mi) { return mi < 0.1 ? "right here" : mi < 10 ? mi.toFixed(1) + " mi away" : Math.round(mi) + " mi away"; }
+
+  // Opens the picker. Resolves { lat, lng, place_name, loc_approx }, null (remove), or undefined (cancel).
+  function pickLocation(current) {
+    return new Promise((resolve) => {
+      const cur = current && current.lat != null ? current : null;
+      const bg = document.createElement("div");
+      bg.className = "modal-bg show loc-modal";
+      bg.innerHTML =
+        '<div class="modal">' +
+          '<h2 style="margin-bottom:4px">📍 Where can people find it?</h2>' +
+          '<p class="muted small" style="margin-bottom:12px">Pin the spot where the real photo lives (a mural, shop window, poster, event…) so people can go scan it.</p>' +
+          '<div class="loc-search"><input class="input" id="loc-q" placeholder="Search a place or address" enterkeyhint="search"><button class="btn btn-sm" id="loc-go" type="button">Search</button></div>' +
+          '<div id="loc-results" class="loc-results"></div>' +
+          '<button class="btn btn-sm btn-ghost btn-block" id="loc-here" type="button" style="margin:8px 0">🎯 Use my current location</button>' +
+          '<div class="loc-warn" id="loc-warn" hidden>⚠️ Don\'t pin your home. Use public places like a shop, mural or event.</div>' +
+          '<div class="loc-map" id="loc-map"><div class="muted small" style="padding:60px 0;text-align:center">Search or use your location to drop a pin</div></div>' +
+          '<label class="field" style="margin-top:12px"><span>Place name (what people will see)</span><input class="input" id="loc-name" maxlength="120" placeholder="e.g. Fordham Plaza mural"></label>' +
+          '<label class="loc-approx"><input type="checkbox" id="loc-approx"> Show approximate area only (about 1 km)</label>' +
+          '<div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">' +
+            '<button class="btn btn-primary" id="loc-save" type="button" disabled>Save location</button>' +
+            (cur ? '<button class="btn btn-ghost" id="loc-remove" type="button">Remove</button>' : "") +
+            '<button class="btn btn-ghost" id="loc-cancel" type="button">Cancel</button>' +
+          "</div>" +
+        "</div>";
+      document.body.appendChild(bg);
+      const $ = (id) => bg.querySelector("#" + id);
+      let point = cur ? { lat: cur.lat, lng: cur.lng } : null, map = null, marker = null, Lref = null;
+      if (cur) { $("loc-name").value = cur.place_name || ""; $("loc-approx").checked = !!cur.loc_approx; }
+      const done = (v) => { bg.remove(); resolve(v); };
+      async function setPoint(lat, lng, name, fromHere) {
+        point = { lat, lng };
+        $("loc-save").disabled = false;
+        if (fromHere) $("loc-warn").hidden = false;
+        if (!map) {
+          $("loc-map").innerHTML = "";
+          try {
+            const m = await makeMap($("loc-map"), lat, lng, 16); map = m.map; Lref = m.L;
+            marker = Lref.marker([lat, lng], { draggable: true, icon: pinIcon(Lref) }).addTo(map);
+            marker.on("dragend", () => { const p = marker.getLatLng(); point = { lat: p.lat, lng: p.lng }; });
+            map.on("click", (e) => { marker.setLatLng(e.latlng); point = { lat: e.latlng.lat, lng: e.latlng.lng }; });
+          } catch (e) { $("loc-map").innerHTML = '<div class="muted small" style="padding:20px;text-align:center">Map couldn\'t load, but your pin is set.</div>'; }
+        } else { marker.setLatLng([lat, lng]); map.setView([lat, lng], 16); }
+        if (name && !$("loc-name").value.trim()) $("loc-name").value = name.slice(0, 120);
+        else if (!$("loc-name").value.trim()) geoName(lat, lng).then((n) => { if (n && !$("loc-name").value.trim()) $("loc-name").value = n.slice(0, 120); });
+      }
+      if (cur) setPoint(cur.lat, cur.lng, cur.place_name);
+      async function search() {
+        const q = $("loc-q").value.trim(); if (!q) return;
+        $("loc-results").innerHTML = '<div class="muted small">Searching…</div>';
+        try {
+          const rows = await geoSearch(q);
+          $("loc-results").innerHTML = rows.length ? rows.map((r, i) => '<button type="button" data-i="' + i + '">' + esc(r.display_name) + "</button>").join("") : '<div class="muted small">No places found. Try adding the city.</div>';
+          $("loc-results").querySelectorAll("button").forEach((b) => b.onclick = () => {
+            const r = rows[+b.dataset.i]; $("loc-results").innerHTML = "";
+            setPoint(+r.lat, +r.lon, (r.name || r.display_name.split(",")[0]) + (r.address && r.address.city ? ", " + r.address.city : ""));
+          });
+        } catch (e) { $("loc-results").innerHTML = '<div class="muted small">Search isn\'t working right now. Try "Use my current location".</div>'; }
+      }
+      $("loc-go").onclick = search;
+      $("loc-q").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); search(); } });
+      $("loc-here").onclick = async () => {
+        $("loc-here").disabled = true; $("loc-here").textContent = "Finding you…";
+        try { const p = await hereNow(); await setPoint(p.lat, p.lng, null, true); }
+        catch (e) { toast(e.message, true); }
+        $("loc-here").disabled = false; $("loc-here").textContent = "🎯 Use my current location";
+      };
+      $("loc-save").onclick = () => point && done({ lat: point.lat, lng: point.lng, place_name: $("loc-name").value.trim().slice(0, 120) || null, loc_approx: $("loc-approx").checked });
+      if ($("loc-remove")) $("loc-remove").onclick = () => done(null);
+      $("loc-cancel").onclick = () => done(undefined);
+    });
+  }
+  function directionsUrl(lat, lng) {
+    return /iPhone|iPad|Macintosh/.test(navigator.userAgent) && "ontouchend" in document
+      ? "https://maps.apple.com/?daddr=" + lat + "," + lng
+      : "https://www.google.com/maps/dir/?api=1&destination=" + lat + "," + lng;
+  }
+
   function confetti(n) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const colors = ["#ffc24b", "#ff5fd2", "#a855f7", "#7c4dff", "#ffffff"];
@@ -359,7 +489,7 @@
 
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
-    timeAgo, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
+    timeAgo, loadLeaflet, makeMap, pinIcon, pickLocation, hereNow, milesBetween, distLabel, directionsUrl, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
     renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme, applyBackground, BG_COLORS,
   };
 })();

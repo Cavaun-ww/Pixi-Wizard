@@ -9,16 +9,17 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261023-2">
+<link rel="stylesheet" href="styles.css?v=20261024-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261023-2"></script>
-<script src="app.js?v=20261023-2"></script>
+<script src="config.js?v=20261024-1"></script>
+<script src="app.js?v=20261024-1"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
   @media (max-width: 760px) { .top { grid-template-columns: 1fr; } }
   .plan-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .xp .stats { font-size: .85rem; color: var(--muted); margin-top: -4px; }
+  .loc-line { margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 </style>
 </head>
 <body>
@@ -337,7 +338,7 @@
   // ── experiences ────────────────────────────────────────────
   async function loadList() {
     const { data, error } = await sb.from("experiences")
-      .select("id, slug, title, image_path, mind_path, video_path, created_at, is_private, likes(count), comments(count)")
+      .select("id, slug, title, image_path, mind_path, video_path, created_at, is_private, lat, lng, place_name, loc_approx, likes(count), comments(count)")
       .eq("owner", uid).order("created_at", { ascending: false });
     const list = $("list");
     if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
@@ -359,6 +360,7 @@
             '<button class="btn btn-sm btn-danger" data-act="del" aria-label="Delete">✕</button>' +
           "</div>" +
           '<button class="btn btn-sm btn-ghost btn-block" data-act="priv">' + (x.is_private ? "🌍 Make public" : "🔒 Make private") + "</button>" +
+          '<button class="btn btn-sm btn-ghost btn-block loc-line" data-act="loc">📍 ' + (x.lat != null ? esc(x.place_name || "Location set") + (x.loc_approx ? " (approx.)" : "") : "Add location") + "</button>" +
         "</div>" +
       "</div>").join("") + "</div>";
 
@@ -367,6 +369,15 @@
       card.querySelector('[data-act="copy"]').onclick = () => App.copy(App.arLink(x.slug));
       card.querySelector('[data-act="qr"]').onclick = () => openQR(x);
       card.querySelector('[data-act="del"]').onclick = () => del(x);
+      card.querySelector('[data-act="loc"]').onclick = async () => {
+        const r = await App.pickLocation(x);
+        if (r === undefined) return;
+        const upd = r ? { lat: r.lat, lng: r.lng, place_name: r.place_name, loc_approx: r.loc_approx } : { lat: null, lng: null, place_name: null, loc_approx: false };
+        const { error } = await sb.from("experiences").update(upd).eq("id", x.id);
+        if (error) return App.toast("Couldn't save the location. Try again.", true);
+        App.toast(r ? "📍 Location saved" : "Location removed");
+        loadList();
+      };
       card.querySelector('[data-act="priv"]').onclick = async (e) => {
         e.currentTarget.disabled = true;
         const { error } = await sb.from("experiences").update({ is_private: !x.is_private }).eq("id", x.id);
