@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-2">
+<link rel="stylesheet" href="styles.css?v=20261024-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-2"></script>
-<script src="app.js?v=20261024-2"></script>
+<script src="config.js?v=20261024-3"></script>
+<script src="app.js?v=20261024-3"></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -113,6 +113,11 @@
           <button type="button" class="loc-chip" id="loc-btn">📍 <span id="loc-label">Add a location (optional)</span></button>
           <div class="small muted" style="margin-top:6px">Let people find the real photo and scan it in person.</div>
         </div>
+        <label class="private-toggle">
+          <input type="checkbox" id="photo-hidden">
+          <span class="switch" aria-hidden="true"></span>
+          <span><b>🙈 Blur the photo</b><br><span class="small muted">Your photo shows blurred on the site, so people can't scan it off a screen. They have to find the real one.</span></span>
+        </label>
         <button class="btn btn-primary btn-lg btn-block" id="publish">Create</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
@@ -536,6 +541,7 @@
         image_aspect: img.w / img.h,
         video_aspect: vid.w / vid.h,
         is_private: $("is-private").checked,
+        photo_hidden: $("photo-hidden").checked,
         ...(loc ? { lat: loc.lat, lng: loc.lng, place_name: loc.place_name, place_area: loc.place_area, loc_approx: loc.loc_approx } : {}),
       }).select("slug").single();
       if (error) throw error;

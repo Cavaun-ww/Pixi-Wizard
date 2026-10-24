@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-2">
+<link rel="stylesheet" href="styles.css?v=20261024-3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-2"></script>
-<script src="app.js?v=20261024-2"></script>
+<script src="config.js?v=20261024-3"></script>
+<script src="app.js?v=20261024-3"></script>
 <style>
   .prof { text-align: center; padding: 30px 0 34px; }
   .prof .avatar { width: 110px; height: 110px; margin: 0 auto 14px; font-size: 2.6rem; }
@@ -48,7 +48,7 @@
   const name = p.display_name || "@" + p.handle;
   document.title = name + " · " + App.C.SITE_NAME;
   const { data: xs } = await sb.from("experiences")
-    .select("slug, title, image_path, created_at, likes(count), comments(count)").eq("owner", p.id).eq("is_private", false).order("created_at", { ascending: false });
+    .select("slug, title, image_path, photo_hidden, created_at, likes(count), comments(count)").eq("owner", p.id).eq("is_private", false).order("created_at", { ascending: false });
 
   box.innerHTML =
     '<div class="prof">' +
@@ -61,7 +61,7 @@
     (xs && xs.length
       ? '<div class="grid">' + xs.map((x) =>
           '<div class="xp">' +
-            '<img class="thumb" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
+            '<div class="thumb-wrap"><img class="thumb' + (x.photo_hidden ? " blurred" : "") + '" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' + (x.photo_hidden ? '<span class="hide-badge">🙈 Find it in person</span>' : "") + "</div>" +
             '<div class="body">' +
               '<div class="title">' + esc(x.title) + "</div>" + (function(x){var l=(x.likes&&x.likes[0]&&x.likes[0].count)||0,c=(x.comments&&x.comments[0]&&x.comments[0].count)||0;return '<div class="stats">♥ '+l+' · 💬 '+c+'</div>';})(x) +
               '<div class="actions"><a class="btn btn-sm btn-primary" href="' + esc(App.arLink(x.slug)) + '">✨ View in AR</a></div>' +

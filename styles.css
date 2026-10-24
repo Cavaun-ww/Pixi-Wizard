@@ -312,3 +312,8 @@ textarea.input { min-height: 90px; resize: vertical; }
 .loc-chip:hover { border-color: var(--accent); color: var(--text); }
 .loc-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .leaflet-container { font: inherit; background: #1a1430; }
+
+/* "blur photo": the real photo has to be found in person */
+img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(1.18); -webkit-touch-callout: none; user-select: none; pointer-events: none; }
+.thumb-wrap { position: relative; overflow: hidden; display: block; }
+.hide-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 6px 12px; border-radius: 999px; background: rgba(10,6,22,.6); backdrop-filter: blur(4px); color: #fff; font-size: .8rem; white-space: nowrap; pointer-events: none; }

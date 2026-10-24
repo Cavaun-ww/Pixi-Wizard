@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261024-2"></script>
+<script src="config.js?v=20261024-3"></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -148,6 +148,11 @@ body.desktop #target-img { max-height:26vh; }
 .where-go { flex:0 0 auto; padding:9px 16px; border-radius:999px; background:var(--magic); color:#fff; text-decoration:none; font-size:.9rem; font-weight:500; }
 .pw-pin { font-size:30px; line-height:34px; text-align:center; background:none; border:0; filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
 .leaflet-container { font:inherit; }
+img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(1.18); -webkit-touch-callout: none; user-select: none; pointer-events: none; }
+.thumb-wrap, .target-wrap { position: relative; overflow: hidden; display: block; }
+.target-wrap { border-radius: 14px; margin-bottom: 16px; }
+.target-wrap #target-img { margin-bottom: 0; }
+.hide-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 7px 14px; border-radius: 999px; background: rgba(10,6,22,.6); backdrop-filter: blur(4px); color: #fff; font-size: .85rem; white-space: nowrap; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -282,7 +287,7 @@ body.desktop #target-img { max-height:26vh; }
   // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
-    var cols = "id, owner, slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, lat, lng, place_name, loc_approx, profiles!owner(handle, display_name, avatar_path)";
+    var cols = "id, owner, slug, title, image_path, photo_hidden, mind_path, video_path, image_aspect, video_aspect, is_private, lat, lng, place_name, loc_approx, profiles!owner(handle, display_name, avatar_path)";
 
     if (isExplore) {
       document.title = "Explore · " + C.SITE_NAME;
@@ -295,7 +300,7 @@ body.desktop #target-img { max-height:26vh; }
       var list = (r.data || []);
       if (!list.length) { $("by").textContent = "No AR experiences yet. Be the first!"; $("start-btn").textContent = "Nothing to scan yet"; return; }
       var publicList = list.filter(function (x) { return !x.is_private; });
-      $("collage").innerHTML = publicList.slice(0, 9).map(function (x) { return '<img alt="" loading="lazy" src="' + pub(x.image_path) + '">'; }).join("");
+      $("collage").innerHTML = publicList.slice(0, 9).map(function (x) { return '<div class="thumb-wrap" style="border-radius:10px"><img alt="" loading="lazy"' + (x.photo_hidden ? ' class="blurred"' : "") + ' src="' + pub(x.image_path) + '"></div>'; }).join("");
       $("collage").hidden = false;
       if (!isMobile) { $("by").innerHTML = publicList.length + ' photos from the community · <a href="explore.html">see all</a>'; $("start-btn").textContent = "🪄 Start AR camera"; return; }
       setStatus("Getting the magic ready…");
@@ -331,6 +336,13 @@ body.desktop #target-img { max-height:26vh; }
     initSocial(xp);
     if (xp.lat != null) showWhere(xp);
     $("target-img").src = pub(xp.image_path);
+    if (xp.photo_hidden) {
+      $("target-img").classList.add("blurred");
+      var wrap = document.createElement("div"); wrap.className = "target-wrap";
+      $("target-img").parentNode.insertBefore(wrap, $("target-img")); wrap.appendChild($("target-img"));
+      var tag = document.createElement("span"); tag.className = "hide-badge"; tag.textContent = "🙈 Find the real photo to unlock it"; wrap.appendChild(tag);
+      $("step2").innerHTML = "Find <b>the real photo</b>" + (xp.place_name ? " at <b>" + esc(xp.place_name) + "</b>" : "") + " and point your phone at it";
+    }
     $("target-img").hidden = false;
     if (isNew) {
       $("new-banner").hidden = false;
