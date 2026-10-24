@@ -379,6 +379,17 @@
         return [first, city].filter(Boolean).join(", ") || (d.display_name || "").split(",").slice(0, 2).join(",");
       }).catch(() => "");
   }
+  // the area around a pin (neighborhood, city, county, state, zip, country), so searches like "New York" find it
+  function geoArea(lat, lng) {
+    return fetch("https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&lat=" + lat + "&lon=" + lng, { headers: { "Accept-Language": "en" } })
+      .then((r) => r.json()).then((d) => {
+        const a = d.address || {};
+        const parts = [a.neighbourhood, a.suburb, a.borough, a.city_district, a.city, a.town, a.village, a.county, a.state, a.postcode, a.country]
+          .filter(Boolean).filter((v, i, arr) => arr.indexOf(v) === i);
+        if (/New York/i.test(a.state || "") && !parts.includes("New York City") && /(Bronx|Brooklyn|Manhattan|Queens|Staten Island|New York)/i.test(parts.join(" "))) parts.push("New York City", "NYC");
+        return parts.join(", ").slice(0, 300);
+      }).catch(() => null);
+  }
   function hereNow() {
     return new Promise((res, rej) => {
       if (!navigator.geolocation) return rej(new Error("Location isn't available on this device."));
@@ -460,7 +471,12 @@
         catch (e) { toast(e.message, true); }
         $("loc-here").disabled = false; $("loc-here").textContent = "🎯 Use my current location";
       };
-      $("loc-save").onclick = () => point && done({ lat: point.lat, lng: point.lng, place_name: $("loc-name").value.trim().slice(0, 120) || null, loc_approx: $("loc-approx").checked });
+      $("loc-save").onclick = async () => {
+        if (!point) return;
+        $("loc-save").disabled = true; $("loc-save").textContent = "Saving…";
+        const area = await geoArea(point.lat, point.lng);
+        done({ lat: point.lat, lng: point.lng, place_name: $("loc-name").value.trim().slice(0, 120) || null, place_area: area, loc_approx: $("loc-approx").checked });
+      };
       if ($("loc-remove")) $("loc-remove").onclick = () => done(null);
       $("loc-cancel").onclick = () => done(undefined);
     });

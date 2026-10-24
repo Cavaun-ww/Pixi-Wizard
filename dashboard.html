@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-1">
+<link rel="stylesheet" href="styles.css?v=20261024-2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-1"></script>
-<script src="app.js?v=20261024-1"></script>
+<script src="config.js?v=20261024-2"></script>
+<script src="app.js?v=20261024-2"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -372,7 +372,7 @@
       card.querySelector('[data-act="loc"]').onclick = async () => {
         const r = await App.pickLocation(x);
         if (r === undefined) return;
-        const upd = r ? { lat: r.lat, lng: r.lng, place_name: r.place_name, loc_approx: r.loc_approx } : { lat: null, lng: null, place_name: null, loc_approx: false };
+        const upd = r ? { lat: r.lat, lng: r.lng, place_name: r.place_name, place_area: r.place_area, loc_approx: r.loc_approx } : { lat: null, lng: null, place_name: null, place_area: null, loc_approx: false };
         const { error } = await sb.from("experiences").update(upd).eq("id", x.id);
         if (error) return App.toast("Couldn't save the location. Try again.", true);
         App.toast(r ? "📍 Location saved" : "Location removed");

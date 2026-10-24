@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-1">
+<link rel="stylesheet" href="styles.css?v=20261024-2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-1"></script>
-<script src="app.js?v=20261024-1"></script>
+<script src="config.js?v=20261024-2"></script>
+<script src="app.js?v=20261024-2"></script>
 <style>
   .ex-hero { text-align: center; padding: 26px 0 26px; }
   .ex-hero .lead { max-width: 520px; margin: 10px auto 22px; }
@@ -56,7 +56,7 @@
     <input type="search" id="q" placeholder="Search" autocomplete="off" enterkeyhint="search" aria-label="Search">
     <button type="button" class="clear" id="clear" aria-label="Clear search" hidden>✕</button>
   </form>
-  <div class="near-row"><button type="button" class="near-btn" id="near">📍 Near me</button><button type="button" class="near-btn" id="near-place" hidden></button></div>
+  <div class="near-row"><button type="button" class="near-btn" id="near">📍 Near me</button></div>
   <p class="results-note" id="note" hidden></p>
   <div id="grid"><p class="muted" style="text-align:center;padding:40px 0">Loading…</p></div>
   <div style="text-align:center;margin-top:22px"><button class="btn" id="more" hidden>Load more</button></div>
@@ -96,7 +96,7 @@
       .select(COLS)
       .eq("is_private", false);
     if (term) {
-      const ors = ["title.ilike.*" + term + "*", "place_name.ilike.*" + term + "*"];
+      const ors = ["title.ilike.*" + term + "*", "place_name.ilike.*" + term + "*", "place_area.ilike.*" + term + "*"];
       if (ownerIds.length) ors.push("owner.in.(" + ownerIds.join(",") + ")");
       q = q.or(ors.join(","));
     }
@@ -130,7 +130,7 @@
     let me;
     try { me = await App.hereNow(); }
     catch (e) { $("near").disabled = false; $("near").textContent = "📍 Near me"; return App.toast(/blocked/.test(e.message) ? "Location is off for this site. Turn it on in your phone's settings to use Near me." : e.message, true); }
-    $("q").value = ""; $("clear").hidden = true; term = ""; $("near-place").hidden = true;
+    $("q").value = ""; $("clear").hidden = true; term = "";
     $("near").disabled = false;
     const ok = await showNear(me, "Closest to you first");
     if (ok) { nearOn = true; $("near").classList.add("on"); $("near").textContent = "📍 Near me ✕"; }
@@ -154,13 +154,6 @@
     return true;
   }
 
-  // "📍 Near New York": look the place up, then sort by distance from it
-  $("near-place").onclick = async () => {
-    if (!placeHit) return;
-    if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; }
-    showNear({ lat: placeHit.lat, lng: placeHit.lng }, "Closest to " + placeHit.name + " first");
-  };
-
   async function runSearch() {
     if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; }
     term = clean($("q").value);
@@ -177,30 +170,9 @@
     }
     loadPage();
   }
-  function clearSearch() { $("near-place").hidden = true; $("q").value = ""; runSearch(); $("q").focus(); }
+  function clearSearch() { $("q").value = ""; runSearch(); $("q").focus(); }
   let t;
-  // only offer "📍 Near …" when what you typed is a real place (city, town, neighborhood, state, zip)
-  let placeHit = null, placeTimer, placeRun = 0;
-  function checkPlace(v) {
-    clearTimeout(placeTimer); placeHit = null; $("near-place").hidden = true;
-    if (v.length < 3) return;
-    const run = ++placeRun;
-    placeTimer = setTimeout(async () => {
-      try {
-        const zip = /^\d{5}$/.test(v);
-        const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(v) + (zip ? "&countrycodes=us" : "&featureType=settlement");
-        const hit = (await (await fetch(url)).json())[0];
-        if (run !== placeRun || !hit) return;
-        placeHit = { lat: +hit.lat, lng: +hit.lon, name: hit.name || hit.display_name.split(",")[0] };
-        $("near-place").textContent = "📍 Near " + placeHit.name;
-        $("near-place").hidden = false;
-      } catch (e) {}
-    }, 600);
-  }
-  $("q").addEventListener("input", () => {
-    checkPlace($("q").value.trim());
-    clearTimeout(t); t = setTimeout(runSearch, 300);
-  });
+  $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(runSearch, 300); });
   $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(t); runSearch(); $("q").blur(); } });
   $("clear").onclick = clearSearch;
   loadPage();
