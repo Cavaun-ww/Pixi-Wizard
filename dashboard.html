@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-5">
+<link rel="stylesheet" href="styles.css?v=20261024-6">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-5"></script>
-<script src="app.js?v=20261024-5"></script>
+<script src="config.js?v=20261024-6"></script>
+<script src="app.js?v=20261024-6"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -20,6 +20,18 @@
   .plan-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .xp .stats { font-size: .85rem; color: var(--muted); margin-top: -4px; }
   .loc-line { margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .mine-tools { margin: 4px 0 18px; display: grid; gap: 10px; }
+  .mine-search { margin: 0; max-width: none; }
+  .search { position: relative; }
+  .search input { width: 100%; padding: 10px 14px 10px 38px; border-radius: 999px; border: 1px solid var(--line); background: #140d26; color: var(--text); font: inherit; font-size: 16px; outline: none; }
+  .search input:focus { border-color: var(--pink); }
+  .search .ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chips button { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: #140d26; color: var(--text-2); font: inherit; font-size: .85rem; cursor: pointer; }
+  .chips button.on { background: var(--magic); border-color: transparent; color: #fff; }
+  .mine-sort { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .mine-sort select { width: auto; flex: 0 0 auto; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: #140d26; color: var(--text); font: inherit; font-size: .85rem; }
 </style>
 </head>
 <body>
@@ -97,6 +109,28 @@
     <h2>My AR experiences</h2>
     <span class="spacer"></span>
     <a class="btn btn-primary" href="create.html">+ Create</a>
+  </div>
+  <div class="mine-tools" id="mine-tools" hidden>
+    <div class="search mine-search">
+      <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="mine-q" placeholder="Search my AR" autocomplete="off" enterkeyhint="search">
+    </div>
+    <div class="chips" id="mine-chips">
+      <button type="button" data-f="all" class="on">All</button>
+      <button type="button" data-f="public">🌍 Public</button>
+      <button type="button" data-f="private">🔒 Private</button>
+      <button type="button" data-f="blur">🙈 Blurred</button>
+      <button type="button" data-f="loc">📍 Has location</button>
+    </div>
+    <div class="mine-sort"><span id="mine-count" class="small muted"></span>
+      <select id="mine-sort" aria-label="Sort">
+        <option value="new">Newest first</option>
+        <option value="old">Oldest first</option>
+        <option value="likes">Most liked</option>
+        <option value="comments">Most comments</option>
+        <option value="az">A–Z</option>
+      </select>
+    </div>
   </div>
   <div id="list"><p class="muted">Loading…</p></div>
 </main>
@@ -343,9 +377,35 @@
     const list = $("list");
     if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
     if (!data.length) {
+      $("mine-tools").hidden = true;
       list.innerHTML = '<div class="empty"><img src="logo-mark.png" alt="" class="float" style="width:90px;margin:0 auto"><p style="margin:10px 0 16px">No magic here yet.</p><a class="btn btn-primary" href="create.html">🪄 Make your first one</a></div>';
       return;
     }
+    allMine = data;
+    $("mine-tools").hidden = data.length < 2;
+    renderList();
+  }
+
+  // ── search / filter / sort my creations ──
+  let allMine = [], mineFilter = "all";
+  const nLikes = (x) => (x.likes && x.likes[0] && x.likes[0].count) || 0;
+  const nComments = (x) => (x.comments && x.comments[0] && x.comments[0].count) || 0;
+  function renderList() {
+    const list = $("list");
+    const q = $("mine-q").value.trim().toLowerCase();
+    let data = allMine.filter((x) =>
+      (!q || (x.title || "").toLowerCase().includes(q) || (x.place_name || "").toLowerCase().includes(q)) &&
+      (mineFilter === "all" || (mineFilter === "public" && !x.is_private) || (mineFilter === "private" && x.is_private) ||
+       (mineFilter === "blur" && x.photo_hidden) || (mineFilter === "loc" && x.lat != null)));
+    const sort = $("mine-sort").value;
+    data = data.slice().sort((a, b) =>
+      sort === "old" ? new Date(a.created_at) - new Date(b.created_at) :
+      sort === "likes" ? nLikes(b) - nLikes(a) :
+      sort === "comments" ? nComments(b) - nComments(a) :
+      sort === "az" ? (a.title || "").localeCompare(b.title || "") :
+      new Date(b.created_at) - new Date(a.created_at));
+    $("mine-count").textContent = data.length === allMine.length ? allMine.length + " total" : data.length + " of " + allMine.length;
+    if (!data.length) { list.innerHTML = '<p class="muted" style="text-align:center;padding:30px 0">Nothing matches. <a href="#" id="mine-reset">Show all</a></p>'; $("mine-reset").onclick = (e) => { e.preventDefault(); resetMine(); }; return; }
     list.innerHTML = '<div class="grid">' + data.map((x) =>
       '<div class="xp" data-id="' + x.id + '">' +
         '<div class="thumb-wrap"><img class="thumb' + (x.photo_hidden ? " blurred" : "") + '" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' + (x.photo_hidden ? '<span class="hide-badge">🙈 Blurred on the site</span>' : "") + "</div>" +
@@ -397,6 +457,21 @@
       };
     });
   }
+
+  function resetMine() {
+    $("mine-q").value = ""; mineFilter = "all"; $("mine-sort").value = "new";
+    document.querySelectorAll("#mine-chips button").forEach((b) => b.classList.toggle("on", b.dataset.f === "all"));
+    renderList();
+  }
+  let mineT;
+  $("mine-q").addEventListener("input", () => { clearTimeout(mineT); mineT = setTimeout(renderList, 150); });
+  $("mine-sort").onchange = renderList;
+  $("mine-chips").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    mineFilter = b.dataset.f;
+    document.querySelectorAll("#mine-chips button").forEach((x) => x.classList.toggle("on", x === b));
+    renderList();
+  });
 
   function openEffects(x) {
     const bg = document.createElement("div");
