@@ -84,7 +84,7 @@
     const myRun = runId;
     $("more").disabled = true;
     let q = sb.from("experiences")
-      .select("slug, title, image_path, created_at, profiles(handle, display_name), likes(count)")
+      .select("slug, title, image_path, created_at, profiles!owner(handle, display_name), likes(count)")
       .eq("is_private", false);
     if (term) {
       const ors = ["title.ilike.*" + term + "*"];

@@ -255,7 +255,7 @@ body.desktop #target-img { max-height:26vh; }
   // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
-    var cols = "id, owner, slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, profiles(handle, display_name, avatar_path)";
+    var cols = "id, owner, slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, profiles!owner(handle, display_name, avatar_path)";
 
     if (isExplore) {
       document.title = "Explore · " + C.SITE_NAME;
@@ -534,7 +534,7 @@ body.desktop #target-img { max-height:26vh; }
   var myCommentLikes = {};
   async function loadComments() {
     var r = await sb.from("comments")
-      .select("id, body, created_at, user_id, profiles(handle, display_name, avatar_path), comment_likes(count)")
+      .select("id, body, created_at, user_id, profiles!user_id(handle, display_name, avatar_path), comment_likes(count)")
       .eq("experience_id", post.id).order("created_at", { ascending: true }).limit(300);
     var list = r.data || [];
     myCommentLikes = {};
