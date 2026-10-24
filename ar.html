@@ -137,7 +137,9 @@ body.desktop #target-img { max-height:26vh; }
 .c-empty { color:var(--muted); font-size:.9rem; padding:8px 0 4px; }
 #soft-note { position:fixed; left:50%; bottom:max(24px, env(safe-area-inset-bottom)); transform:translate(-50%, 12px); z-index:300; padding:9px 16px; border-radius:999px; background:rgba(29,21,56,.92); border:1px solid #3d2f66; color:var(--text-2); font-size:.85rem; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
 #soft-note.show { opacity:1; transform:translate(-50%, 0); }
-.where { margin-top:20px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:#140d26; text-align:left; }
+.where-chip { display:inline-flex; align-items:center; gap:4px; margin-top:10px; padding:6px 14px; border-radius:999px; border:1px solid #3d2f66; background:#1d1538; color:var(--text); font-size:.88rem; text-decoration:none; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.where-chip[hidden] { display:none; }
+.where { margin-top:20px; scroll-margin-top:20px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:#140d26; text-align:left; }
 .where-map { height:160px; background:#1a1430; }
 .where-row { display:flex; align-items:center; gap:12px; padding:12px 14px; }
 .where-name { flex:1; min-width:0; display:flex; flex-direction:column; }
@@ -157,6 +159,7 @@ body.desktop #target-img { max-height:26vh; }
     <div class="collage" id="collage" hidden></div>
     <h1 id="title">Loading…</h1>
     <div class="by" id="by"></div>
+    <a class="where-chip" id="where-chip" href="#where" hidden></a>
     <div class="steps">
       <div class="step"><span class="n">1</span><span>Tap <b>Start AR camera</b> and allow camera access</span></div>
       <div class="step"><span class="n">2</span><span id="step2">Point your phone at <b>the image above</b></span></div>
@@ -507,6 +510,9 @@ body.desktop #target-img { max-height:26vh; }
   // ── where to find it (optional location) ─────────────────
   function showWhere(xp) {
     $("where").hidden = false;
+    $("where-chip").hidden = false;
+    $("where-chip").textContent = "📍 " + (xp.place_name || "See where to find it") + (xp.loc_approx ? " (area)" : "");
+    $("where-chip").onclick = function (e) { e.preventDefault(); $("where").scrollIntoView({ behavior: "smooth", block: "center" }); };
     $("where-name").textContent = "📍 " + (xp.place_name || "On the map");
     $("where-sub").textContent = xp.loc_approx ? "Approximate area · find the photo nearby" : "Go here to scan the real photo";
     var ios = /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && "ontouchend" in document);
