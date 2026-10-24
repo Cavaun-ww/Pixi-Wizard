@@ -487,6 +487,47 @@
       : "https://www.google.com/maps/dir/?api=1&destination=" + lat + "," + lng;
   }
 
+
+  // ── pop-out effects editor (size, lift, background removal) ──
+  const LIFTS = [["Flat", 0], ["Low", 0.1], ["Medium", 0.25], ["High", 0.45]];
+  function mountEffects(el, init) {
+    init = init || {};
+    const pop = Math.round(((+init.pop_scale || 1) * 100));
+    const liftIdx = Math.max(0, LIFTS.findIndex((l) => Math.abs(l[1] - (+init.lift || 0)) < 0.02));
+    el.innerHTML =
+      '<div class="fx">' +
+        '<div class="fx-row"><span>Size <b class="fx-val" id="fx-pop-v">' + pop + '%</b></span>' +
+          '<input type="range" id="fx-pop" min="100" max="200" step="5" value="' + pop + '"></div>' +
+        '<div class="fx-hint">Over 100% spills past the photo\'s edges.</div>' +
+        '<div class="fx-row"><span>Lift off the photo</span><div class="fx-seg" id="fx-lift">' +
+          LIFTS.map((l, i) => '<button type="button" data-i="' + i + '"' + (i === liftIdx ? ' class="on"' : "") + ">" + l[0] + "</button>").join("") + "</div></div>" +
+        '<div class="fx-hint">Floats it toward the viewer so it looks 3D as they move.</div>' +
+        '<div class="fx-row"><span>Remove background</span><div class="fx-seg" id="fx-key">' +
+          [["none", "Off"], ["green", "🟩 Green"], ["black", "⬛ Black"]].map((k) => '<button type="button" data-k="' + k[0] + '"' + ((init.key_mode || "none") === k[0] ? ' class="on"' : "") + ">" + k[1] + "</button>").join("") + "</div></div>" +
+        '<div class="fx-hint">Film or export your animation on a solid green or black background and it disappears in AR, so only your animation floats.</div>' +
+      "</div>";
+    const q = (s) => el.querySelector(s);
+    q("#fx-pop").oninput = () => (q("#fx-pop-v").textContent = q("#fx-pop").value + "%");
+    el.querySelectorAll(".fx-seg").forEach((seg) => seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    }));
+    return {
+      get() {
+        const li = +(q("#fx-lift .on") || {}).dataset.i || 0;
+        return { pop_scale: (+q("#fx-pop").value) / 100, lift: LIFTS[li][1], key_mode: (q("#fx-key .on") || {}).dataset.k || "none" };
+      },
+    };
+  }
+  function effectsSummary(x) {
+    const bits = [];
+    if ((+x.pop_scale || 1) > 1) bits.push(Math.round(x.pop_scale * 100) + "%");
+    const l = LIFTS.find((l) => Math.abs(l[1] - (+x.lift || 0)) < 0.02);
+    if (l && l[1]) bits.push("lift " + l[0].toLowerCase());
+    if (x.key_mode === "green") bits.push("green removed"); else if (x.key_mode === "black") bits.push("black removed");
+    return bits.join(" · ");
+  }
+
   function confetti(n) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const colors = ["#ffc24b", "#ff5fd2", "#a855f7", "#7c4dff", "#ffffff"];
@@ -505,7 +546,7 @@
 
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
-    timeAgo, loadLeaflet, makeMap, pinIcon, pickLocation, hereNow, milesBetween, distLabel, directionsUrl, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
+    timeAgo, mountEffects, effectsSummary, loadLeaflet, makeMap, pinIcon, pickLocation, hereNow, milesBetween, distLabel, directionsUrl, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
     renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme, applyBackground, BG_COLORS,
   };
 })();

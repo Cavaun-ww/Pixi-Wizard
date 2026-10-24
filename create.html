@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-4">
+<link rel="stylesheet" href="styles.css?v=20261024-5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-4"></script>
-<script src="app.js?v=20261024-4"></script>
+<script src="config.js?v=20261024-5"></script>
+<script src="app.js?v=20261024-5"></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -91,6 +91,10 @@
           <button class="btn btn-ghost" id="trim-cancel" type="button">Cancel</button>
         </div>
       </div>
+      <details class="fx-box" id="fx-box">
+        <summary>✨ Pop-out effects <span class="small muted" id="fx-sum">(optional)</span></summary>
+        <div id="fx"></div>
+      </details>
     </div>
 
     <div class="card">
@@ -426,6 +430,9 @@
   }
 
 
+  // pop-out effects
+  const fx = App.mountEffects($("fx"), {});
+
   // optional location
   let loc = null;
   $("loc-btn").onclick = async () => {
@@ -542,6 +549,7 @@
         video_aspect: vid.w / vid.h,
         is_private: $("is-private").checked,
         photo_hidden: $("photo-hidden").checked,
+        ...fx.get(),
         ...(loc ? { lat: loc.lat, lng: loc.lng, place_name: loc.place_name, place_area: loc.place_area, loc_approx: loc.loc_approx } : {}),
       }).select("slug").single();
       if (error) throw error;

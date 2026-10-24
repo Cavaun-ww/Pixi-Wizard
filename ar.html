@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261024-4"></script>
+<script src="config.js?v=20261024-5"></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -287,7 +287,7 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
   // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
-    var cols = "id, owner, slug, title, image_path, photo_hidden, mind_path, video_path, image_aspect, video_aspect, is_private, lat, lng, place_name, loc_approx, profiles!owner(handle, display_name, avatar_path)";
+    var cols = "id, owner, slug, title, image_path, photo_hidden, pop_scale, lift, key_mode, mind_path, video_path, image_aspect, video_aspect, is_private, lat, lng, place_name, loc_approx, profiles!owner(handle, display_name, avatar_path)";
 
     if (isExplore) {
       document.title = "Explore · " + C.SITE_NAME;
@@ -355,6 +355,23 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
   function isPhoto(x) { return /\.(jpe?g|png|webp)$/i.test(x.video_path || ""); }
   function isGif(x) { return /\.gif$/i.test(x.video_path || ""); }
   function isVideo(x) { return !isPhoto(x) && !isGif(x); }
+
+  // ── background removal ("green screen" or "black background"), done live on the phone ──
+  function applyKey(mat, mode) {
+    var glsl = mode === "green"
+      ? "{ float m = max(diffuseColor.r, diffuseColor.b); float gd = diffuseColor.g - m;" +
+        "  diffuseColor.a *= 1.0 - smoothstep(0.06, 0.22, gd);" +
+        "  if (gd > 0.0) diffuseColor.g = m + gd * 0.25;" +       // remove green spill around edges
+        "  if (diffuseColor.a < 0.02) discard; }"
+      : "{ float l = max(max(diffuseColor.r, diffuseColor.g), diffuseColor.b);" +
+        "  diffuseColor.a *= smoothstep(0.05, 0.18, l);" +
+        "  if (diffuseColor.a < 0.02) discard; }";
+    mat.onBeforeCompile = function (sh) {
+      sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n" + glsl);
+    };
+    mat.customProgramCacheKey = function () { return "pwkey-" + mode; };
+    mat.needsUpdate = true;
+  }
 
   // ── animated GIF player: decodes the GIF and draws its frames onto a canvas ──
   var gifLib = null;
@@ -478,8 +495,13 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
         // keep the overlay's own shape (landscape stays landscape), fitted inside the photo and centered
         var pw = 1, ph = 1 / vidA;
         if (vidA < imgA) { ph = 1 / imgA; pw = ph * vidA; }
-        var geo = new THREE.PlaneGeometry(pw, ph);
-        var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0 });
+        // pop-out: overlay can be bigger than the photo and float above it
+        var pop = Math.min(2, Math.max(1, +xp.pop_scale || 1)), lift = Math.min(0.6, Math.max(0, +xp.lift || 0));
+        var geo = new THREE.PlaneGeometry(pw * pop, ph * pop);
+        var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0, depthWrite: false });
+        if (xp.key_mode === "green" || xp.key_mode === "black") applyKey(mat, xp.key_mode);
+        if (lift) this.el.object3D.position.z = 0.01 + lift;
+        this.lift = lift;
         this.el.setObject3D("vid", new THREE.Mesh(geo, mat));
         this.mat = mat;
         this.visible = false;
@@ -508,6 +530,7 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
       },
       tick: function (t, dt) {
         if (!this.mat) return;
+        if (this.lift && this.visible) this.el.object3D.position.z = 0.01 + this.lift + Math.sin(t / 900) * this.lift * 0.08; // gentle float
         if (this.gif && this.visible) {
           this.gif.step(dt || 16);
           if (this.gif.changed) { this.gif.changed = false; this.gifTex.needsUpdate = true; }

@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-4">
+<link rel="stylesheet" href="styles.css?v=20261024-5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-4"></script>
-<script src="app.js?v=20261024-4"></script>
+<script src="config.js?v=20261024-5"></script>
+<script src="app.js?v=20261024-5"></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -338,7 +338,7 @@
   // ── experiences ────────────────────────────────────────────
   async function loadList() {
     const { data, error } = await sb.from("experiences")
-      .select("id, slug, title, image_path, mind_path, video_path, created_at, is_private, photo_hidden, lat, lng, place_name, loc_approx, likes(count), comments(count)")
+      .select("id, slug, title, image_path, mind_path, video_path, created_at, is_private, photo_hidden, pop_scale, lift, key_mode, lat, lng, place_name, loc_approx, likes(count), comments(count)")
       .eq("owner", uid).order("created_at", { ascending: false });
     const list = $("list");
     if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
@@ -360,6 +360,7 @@
             '<button class="btn btn-sm btn-danger" data-act="del" aria-label="Delete">✕</button>' +
           "</div>" +
           '<button class="btn btn-sm btn-ghost btn-block" data-act="priv">' + (x.is_private ? "🌍 Make public" : "🔒 Make private") + "</button>" +
+          '<button class="btn btn-sm btn-ghost btn-block loc-line" data-act="fx">✨ ' + (App.effectsSummary(x) ? "Effects: " + esc(App.effectsSummary(x)) : "Pop-out effects") + "</button>" +
           '<button class="btn btn-sm btn-ghost btn-block loc-line" data-act="blur">' + (x.photo_hidden ? "👁 Show photo clearly" : "🙈 Blur photo (find it in person)") + "</button>" +
           '<button class="btn btn-sm btn-ghost btn-block loc-line" data-act="loc">📍 ' + (x.lat != null ? esc(x.place_name || "Location set") + (x.loc_approx ? " (approx.)" : "") : "Add location") + "</button>" +
         "</div>" +
@@ -370,6 +371,7 @@
       card.querySelector('[data-act="copy"]').onclick = () => App.copy(App.arLink(x.slug));
       card.querySelector('[data-act="qr"]').onclick = () => openQR(x);
       card.querySelector('[data-act="del"]').onclick = () => del(x);
+      card.querySelector('[data-act="fx"]').onclick = () => openEffects(x);
       card.querySelector('[data-act="blur"]').onclick = async (e) => {
         e.currentTarget.disabled = true;
         const { error } = await sb.from("experiences").update({ photo_hidden: !x.photo_hidden }).eq("id", x.id);
@@ -394,6 +396,22 @@
         loadList();
       };
     });
+  }
+
+  function openEffects(x) {
+    const bg = document.createElement("div");
+    bg.className = "modal-bg show";
+    bg.innerHTML = '<div class="modal"><h2 style="margin-bottom:4px">✨ Pop-out effects</h2><p class="muted small">' + esc(x.title) + '</p><div id="fx-edit"></div>' +
+      '<div class="row" style="gap:8px;margin-top:18px"><button class="btn btn-primary" id="fx-save">Save</button><button class="btn btn-ghost" id="fx-cancel">Cancel</button></div></div>';
+    document.body.appendChild(bg);
+    const ed = App.mountEffects(bg.querySelector("#fx-edit"), x);
+    bg.querySelector("#fx-cancel").onclick = () => bg.remove();
+    bg.querySelector("#fx-save").onclick = async () => {
+      bg.querySelector("#fx-save").disabled = true;
+      const { error } = await sb.from("experiences").update(ed.get()).eq("id", x.id);
+      if (error) { bg.querySelector("#fx-save").disabled = false; return App.toast("Couldn't save effects. Try again.", true); }
+      bg.remove(); App.toast("✨ Effects saved. Scan it to see"); loadList();
+    };
   }
 
   async function openQR(x) {
