@@ -316,4 +316,4 @@ textarea.input { min-height: 90px; resize: vertical; }
 /* "blur photo": the real photo has to be found in person */
 img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(1.18); -webkit-touch-callout: none; user-select: none; pointer-events: none; }
 .thumb-wrap { position: relative; overflow: hidden; display: block; }
-.hide-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 6px 12px; border-radius: 999px; background: rgba(10,6,22,.6); backdrop-filter: blur(4px); color: #fff; font-size: .8rem; white-space: nowrap; pointer-events: none; }
+.hide-badge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: max-content; max-width: 84%; padding: 8px 14px; border-radius: 16px; background: rgba(10,6,22,.72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); color: #fff; font-size: .85rem; line-height: 1.3; text-align: center; white-space: normal; pointer-events: none; z-index: 2; }
