@@ -113,8 +113,18 @@ body.desktop #target-img { max-height:26vh; }
 #c-input:focus { border-color:#ff5fd2; }
 #c-post { padding:10px 16px; border-radius:999px; border:0; background:var(--magic); color:#fff; font:inherit; font-weight:500; cursor:pointer; }
 #c-post:disabled { opacity:.5; }
-.c-signin { font-size:.9rem; color:var(--text-2); margin-bottom:14px; padding:12px; border:1px dashed var(--line); border-radius:14px; text-align:center; }
-.c-signin a { color:var(--accent-2); }
+#c-form[hidden] { display:none; }
+.pro-pop { position:fixed; inset:0; z-index:200; display:grid; place-items:end center; background:rgba(5,3,12,.6); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); animation:fadeIn .2s; }
+.pro-pop[hidden] { display:none; }
+.pro-pop .sheet { width:min(420px,100%); margin:0 0 max(16px, env(safe-area-inset-bottom)); padding:24px 22px 18px; border-radius:24px; background:#170f2c; border:1px solid #3d2f66; text-align:center; box-shadow:0 -10px 50px rgba(168,85,247,.25); animation:slideUp .25s ease; }
+@media (min-width:600px) { .pro-pop { place-items:center; } }
+.pro-pop img { width:70px; margin:0 auto 4px; display:block; }
+.pro-pop h3 { font-family:"Fredoka",sans-serif; font-weight:500; font-size:1.35rem; margin:4px 0 6px; }
+.pro-pop p { color:var(--text-2); font-size:.95rem; line-height:1.45; margin-bottom:18px; }
+.pro-pop .go { display:block; width:100%; padding:14px; border-radius:999px; border:0; background:var(--magic); color:#fff; font:inherit; font-weight:500; font-size:1rem; cursor:pointer; text-decoration:none; }
+.pro-pop .later { display:block; width:100%; margin-top:8px; padding:12px; border:0; background:none; color:var(--muted); font:inherit; cursor:pointer; }
+@keyframes fadeIn { from { opacity:0 } }
+@keyframes slideUp { from { transform:translateY(40px); opacity:0 } }
 .cm { display:flex; gap:10px; padding:10px 0; border-top:1px solid #1f1838; }
 .cm .av { width:32px; height:32px; border-radius:50%; flex:0 0 auto; overflow:hidden; display:grid; place-items:center; background:var(--magic); color:#1a0630; font-weight:600; font-size:.85rem; text-decoration:none; }
 .cm .av img { width:100%; height:100%; object-fit:cover; }
@@ -130,6 +140,8 @@ body.desktop #target-img { max-height:26vh; }
 .cm .cl .heart { font-size:1rem; }
 .cm .cl.on { color:#ff5fd2; }
 .c-empty { color:var(--muted); font-size:.9rem; padding:8px 0 4px; }
+#soft-note { position:fixed; left:50%; bottom:max(24px, env(safe-area-inset-bottom)); transform:translate(-50%, 12px); z-index:300; padding:9px 16px; border-radius:999px; background:rgba(29,21,56,.92); border:1px solid #3d2f66; color:var(--text-2); font-size:.85rem; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+#soft-note.show { opacity:1; transform:translate(-50%, 0); }
 </style>
 </head>
 <body>
@@ -164,8 +176,16 @@ body.desktop #target-img { max-height:26vh; }
           <textarea id="c-input" rows="1" maxlength="500" placeholder="Add a comment…"></textarea>
           <button type="submit" id="c-post">Post</button>
         </form>
-        <div id="c-signin" class="c-signin" hidden><a id="c-signin-link" href="auth.html">Sign in</a> to like and comment</div>
         <div id="c-list"></div>
+      </div>
+    </div>
+    <div class="pro-pop" id="pro-pop" hidden role="dialog" aria-modal="true">
+      <div class="sheet">
+        <img src="logo-mark.png" alt="">
+        <h3 id="pp-title">✨ That's a Pro perk</h3>
+        <p id="pp-text"></p>
+        <a class="go" id="pp-go" href="dashboard.html?upgrade=1">Go Pro</a>
+        <button class="later" id="pp-later" type="button">Not now</button>
       </div>
     </div>
     <div class="desk" id="desk">
@@ -488,11 +508,27 @@ body.desktop #target-img { max-height:26vh; }
     if (s < 86400) return Math.floor(s / 3600) + "h"; if (s < 604800) return Math.floor(s / 86400) + "d";
     return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
-  function needSignIn() { location.href = "auth.html?next=" + encodeURIComponent("ar.html?x=" + encodeURIComponent(post.slug)); }
-  function needPro(what) {
-    if (confirm(what + " is a Pro perk ✨ Go Pro to like, comment and message creators?")) location.href = "dashboard.html?upgrade=1";
+  function popup(title, text, btn, href) {
+    $("pp-title").textContent = title; $("pp-text").textContent = text;
+    $("pp-go").textContent = btn; $("pp-go").href = href;
+    $("pro-pop").hidden = false;
   }
-  function toastMsg(t) { setStatus(t, "err"); setTimeout(function () { setStatus(""); }, 3500); }
+  $("pp-later").onclick = function () { $("pro-pop").hidden = true; };
+  $("pro-pop").onclick = function (e) { if (e.target === this) this.hidden = true; };
+  function needSignIn() {
+    popup("Join the fun ✨", "Sign in to like, comment and message creators.", "Sign in", "auth.html?next=" + encodeURIComponent("ar.html?x=" + post.slug));
+  }
+  function needPro(what) {
+    popup("✨ " + what + " is a Pro perk", "Go Pro to like, comment and message creators — plus make 30 new AR experiences every month.", "Go Pro · " + (C.PRO_PRICE_LABEL || "$9.99") + "/month", "dashboard.html?upgrade=1");
+  }
+  // small, soft note that fades away on its own
+  var softTimer;
+  function toastMsg(t) {
+    var el = $("soft-note");
+    if (!el) { el = document.createElement("div"); el.id = "soft-note"; document.body.appendChild(el); }
+    el.textContent = t; el.classList.add("show");
+    clearTimeout(softTimer); softTimer = setTimeout(function () { el.classList.remove("show"); }, 2600);
+  }
 
   async function initSocial(xp) {
     post = xp;
@@ -504,14 +540,18 @@ body.desktop #target-img { max-height:26vh; }
     if (p.handle && me !== xp.owner) {
       $("msg-btn").hidden = false;
       $("msg-btn").textContent = "💬 Message " + (p.display_name || "@" + p.handle);
-      $("msg-btn").href = me ? "messages.html?to=" + encodeURIComponent(p.handle) : "auth.html?next=" + encodeURIComponent("messages.html?to=" + p.handle);
+      $("msg-btn").href = "messages.html?to=" + encodeURIComponent(p.handle);
+      $("msg-btn").onclick = function (e) {
+        if (!me) { e.preventDefault(); needSignIn(); }
+        else if (!isPro) { e.preventDefault(); needPro("Messaging"); }
+      };
     }
-    if (me && isPro) $("c-form").hidden = false;
-    else if (me) {
-      $("c-signin").hidden = false;
-      $("c-signin").innerHTML = '💬 Commenting is a <b>Pro</b> perk. <a href="dashboard.html?upgrade=1">Go Pro</a> to comment, like and message creators.';
-    }
-    else { $("c-signin").hidden = false; $("c-signin-link").href = "auth.html?next=" + encodeURIComponent("ar.html?x=" + post.slug); }
+    // everyone sees the comment box; tapping it explains what's needed
+    $("c-form").hidden = false;
+    $("c-input").addEventListener("focus", function () {
+      if (!me) { this.blur(); needSignIn(); }
+      else if (!isPro) { this.blur(); needPro("Commenting"); }
+    });
     loadLikes(); loadComments();
   }
 
@@ -532,7 +572,7 @@ body.desktop #target-img { max-height:26vh; }
     if (on) { this.classList.remove("pop"); void this.offsetWidth; this.classList.add("pop"); }
     var r = on ? await sb.from("likes").insert({ user_id: me, experience_id: post.id })
                : await sb.from("likes").delete().eq("user_id", me).eq("experience_id", post.id);
-    if (r.error && !/duplicate/i.test(r.error.message)) { setLiked(!on); $("like-n").textContent = n; toastMsg("Couldn't save your like. Try again."); }
+    if (r.error && !/duplicate/i.test(r.error.message)) { setLiked(!on); $("like-n").textContent = n; toastMsg("Like didn't save. Try again"); }
   };
 
   var myCommentLikes = {};
@@ -575,11 +615,11 @@ body.desktop #target-img { max-height:26vh; }
       myCommentLikes[id] = on;
       var r = on ? await sb.from("comment_likes").insert({ user_id: me, comment_id: id })
                  : await sb.from("comment_likes").delete().eq("user_id", me).eq("comment_id", id);
-      if (r.error && !/duplicate/i.test(r.error.message)) toastMsg("Couldn't save that. Try again.");
+      if (r.error && !/duplicate/i.test(r.error.message)) toastMsg("Didn't save. Try again");
     } else if (act === "del") {
       if (!confirm("Delete this comment?")) return;
       var d = await sb.from("comments").delete().eq("id", id);
-      if (d.error) return toastMsg("Couldn't delete it.");
+      if (d.error) return toastMsg("Couldn't delete it");
       loadComments();
     } else if (act === "report") {
       var why = prompt("What's wrong with this comment? (optional)");
@@ -596,7 +636,10 @@ body.desktop #target-img { max-height:26vh; }
     $("c-post").disabled = true;
     var r = await sb.from("comments").insert({ experience_id: post.id, user_id: me, body: body.slice(0, 500) });
     $("c-post").disabled = false;
-    if (r.error) return toastMsg(/row-level/i.test(r.error.message) ? "You can't comment here right now (slow down, or the creator has limited comments)." : "Couldn't post your comment.");
+    if (r.error) {
+      if (/row-level/i.test(r.error.message) && !isPro) return needPro("Commenting");
+      return toastMsg(/row-level/i.test(r.error.message) ? "Slow down a little, then try again" : "Didn't post. Try again");
+    }
     $("c-input").value = ""; $("c-input").style.height = "";
     loadComments();
   };
