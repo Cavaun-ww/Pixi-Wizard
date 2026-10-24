@@ -38,6 +38,7 @@
   .near-row { text-align: center; margin: -6px 0 16px; }
   .near-btn { padding: 7px 16px; border-radius: 999px; border: 1px solid var(--line); background: #140d26; color: var(--text-2); font: inherit; font-size: .88rem; cursor: pointer; }
   .near-btn:hover { border-color: var(--pink); color: var(--text); }
+  .near-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .near-btn.on { border-color: var(--pink); background: #3a1440; color: #fff; }
   .tile .pin { position: absolute; left: 6px; bottom: 44px; font-size: .68rem; padding: 3px 7px; border-radius: 999px; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); max-width: calc(100% - 12px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .results-note { text-align: center; color: var(--muted); font-size: .9rem; margin: -8px 0 16px; }
@@ -55,7 +56,7 @@
     <input type="search" id="q" placeholder="Search" autocomplete="off" enterkeyhint="search" aria-label="Search">
     <button type="button" class="clear" id="clear" aria-label="Clear search" hidden>✕</button>
   </form>
-  <div class="near-row"><button type="button" class="near-btn" id="near">📍 Near me</button></div>
+  <div class="near-row"><button type="button" class="near-btn" id="near">📍 Near me</button><button type="button" class="near-btn" id="near-place" hidden></button></div>
   <p class="results-note" id="note" hidden></p>
   <div id="grid"><p class="muted" style="text-align:center;padding:40px 0">Loading…</p></div>
   <div style="text-align:center;margin-top:22px"><button class="btn" id="more" hidden>Load more</button></div>
@@ -95,7 +96,7 @@
       .select(COLS)
       .eq("is_private", false);
     if (term) {
-      const ors = ["title.ilike.*" + term + "*"];
+      const ors = ["title.ilike.*" + term + "*", "place_name.ilike.*" + term + "*"];
       if (ownerIds.length) ors.push("owner.in.(" + ownerIds.join(",") + ")");
       q = q.or(ors.join(","));
     }
@@ -129,20 +130,44 @@
     let me;
     try { me = await App.hereNow(); }
     catch (e) { $("near").disabled = false; $("near").textContent = "📍 Near me"; return App.toast(/blocked/.test(e.message) ? "Location is off for this site. Turn it on in your phone's settings to use Near me." : e.message, true); }
-    const myRun = ++runId;
-    $("q").value = ""; $("clear").hidden = true; term = "";
-    const { data, error } = await sb.from("experiences").select(COLS).eq("is_private", false).not("lat", "is", null).limit(500);
+    $("q").value = ""; $("clear").hidden = true; term = ""; $("near-place").hidden = true;
     $("near").disabled = false;
-    if (myRun !== runId) return;
-    if (error) { $("near").textContent = "📍 Near me"; return App.toast("Couldn't load nearby AR.", true); }
-    nearOn = true; $("near").classList.add("on"); $("near").textContent = "📍 Near me ✕";
-    const rows = (data || []).map((x) => ({ ...x, _dist: App.milesBetween(me, { lat: x.lat, lng: x.lng }) })).sort((a, b) => a._dist - b._dist);
+    const ok = await showNear(me, "Closest to you first");
+    if (ok) { nearOn = true; $("near").classList.add("on"); $("near").textContent = "📍 Near me ✕"; }
+    else $("near").textContent = "📍 Near me";
+  };
+
+  // sort pinned AR by distance from a point (you, or a searched place)
+  async function showNear(pt, label) {
+    const myRun = ++runId;
+    $("grid").innerHTML = '<p class="muted" style="text-align:center;padding:40px 0">Finding nearby AR…</p>';
+    const { data, error } = await sb.from("experiences").select(COLS).eq("is_private", false).not("lat", "is", null).limit(500);
+    if (myRun !== runId) return false;
+    if (error) { App.toast("Couldn't load nearby AR.", true); return false; }
+    const rows = (data || []).map((x) => ({ ...x, _dist: App.milesBetween(pt, { lat: x.lat, lng: x.lng }) })).sort((a, b) => a._dist - b._dist);
     $("more").hidden = true;
     $("note").hidden = false;
-    $("note").textContent = rows.length ? "Closest first · only AR with a location" : "";
+    $("note").textContent = rows.length ? label + " · only AR with a location" : "";
     $("grid").innerHTML = rows.length
       ? '<div class="tiles">' + rows.map(card).join("") + "</div>"
       : '<div class="empty"><p style="margin:10px 0 6px">No AR pinned on the map yet.</p><p class="muted small">Creators can add a 📍 location when they make one, or later on My page.</p></div>';
+    return true;
+  }
+
+  // "📍 Near New York": look the place up, then sort by distance from it
+  $("near-place").onclick = async () => {
+    const q = $("q").value.trim(); if (!q) return;
+    $("near-place").disabled = true; $("near-place").textContent = "Finding " + q + "…";
+    let hit = null;
+    try {
+      const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(q));
+      hit = (await r.json())[0];
+    } catch (e) {}
+    $("near-place").disabled = false; $("near-place").textContent = "📍 Near " + q;
+    if (!hit) return App.toast("Couldn't find that place. Try adding the city or state.", true);
+    const name = (hit.name || hit.display_name.split(",")[0]);
+    if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; }
+    showNear({ lat: +hit.lat, lng: +hit.lon }, "Closest to " + name + " first");
   };
 
   async function runSearch() {
@@ -161,9 +186,14 @@
     }
     loadPage();
   }
-  function clearSearch() { $("q").value = ""; runSearch(); $("q").focus(); }
+  function clearSearch() { $("near-place").hidden = true; $("q").value = ""; runSearch(); $("q").focus(); }
   let t;
-  $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(runSearch, 300); });
+  $("q").addEventListener("input", () => {
+    const v = $("q").value.trim();
+    $("near-place").hidden = v.length < 2;
+    $("near-place").textContent = "📍 Near " + v.slice(0, 30);
+    clearTimeout(t); t = setTimeout(runSearch, 300);
+  });
   $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(t); runSearch(); $("q").blur(); } });
   $("clear").onclick = clearSearch;
   loadPage();
