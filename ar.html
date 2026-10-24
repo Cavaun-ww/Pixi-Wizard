@@ -490,7 +490,7 @@ body.desktop #target-img { max-height:26vh; }
   }
   function needSignIn() { location.href = "auth.html?next=" + encodeURIComponent("ar.html?x=" + encodeURIComponent(post.slug)); }
   function needPro(what) {
-    if (confirm(what + " is a Pro perk ✨ Go Pro to like posts and comments and message creators?")) location.href = "dashboard.html?upgrade=1";
+    if (confirm(what + " is a Pro perk ✨ Go Pro to like, comment and message creators?")) location.href = "dashboard.html?upgrade=1";
   }
   function toastMsg(t) { setStatus(t, "err"); setTimeout(function () { setStatus(""); }, 3500); }
 
@@ -506,7 +506,11 @@ body.desktop #target-img { max-height:26vh; }
       $("msg-btn").textContent = "💬 Message " + (p.display_name || "@" + p.handle);
       $("msg-btn").href = me ? "messages.html?to=" + encodeURIComponent(p.handle) : "auth.html?next=" + encodeURIComponent("messages.html?to=" + p.handle);
     }
-    if (me) $("c-form").hidden = false;
+    if (me && isPro) $("c-form").hidden = false;
+    else if (me) {
+      $("c-signin").hidden = false;
+      $("c-signin").innerHTML = '💬 Commenting is a <b>Pro</b> perk. <a href="dashboard.html?upgrade=1">Go Pro</a> to comment, like and message creators.';
+    }
     else { $("c-signin").hidden = false; $("c-signin-link").href = "auth.html?next=" + encodeURIComponent("ar.html?x=" + post.slug); }
     loadLikes(); loadComments();
   }

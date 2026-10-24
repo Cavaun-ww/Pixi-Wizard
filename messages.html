@@ -115,7 +115,7 @@
     } else if (!can) {
       gate.innerHTML = plan.is_pro
         ? '<div class="notice">You can\'t message ' + esc(name) + " right now.</div>"
-        : '<div class="notice">💬 Messaging creators is a <b>Pro</b> perk. You can always reply when someone messages you first.<br><button class="btn btn-primary btn-sm" id="go-pro">✨ Go Pro</button></div>';
+        : '<div class="notice">💬 Sending messages is a <b>Pro</b> perk. Go Pro to message and reply to creators.<br><button class="btn btn-primary btn-sm" id="go-pro">✨ Go Pro</button></div>';
       if ($("go-pro")) $("go-pro").onclick = () => App.openUpgrade();
       $("composer").hidden = true;
     } else {
