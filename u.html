@@ -16,6 +16,7 @@
 <style>
   .prof { text-align: center; padding: 30px 0 34px; }
   .prof .avatar { width: 110px; height: 110px; margin: 0 auto 14px; font-size: 2.6rem; }
+  .xp .stats { font-size: .85rem; color: var(--muted); margin-top: -4px; }
   .prof .bio { max-width: 460px; margin: 10px auto 0; color: var(--text-2); }
 </style>
 </head>
@@ -47,7 +48,7 @@
   const name = p.display_name || "@" + p.handle;
   document.title = name + " · " + App.C.SITE_NAME;
   const { data: xs } = await sb.from("experiences")
-    .select("slug, title, image_path, created_at").eq("owner", p.id).eq("is_private", false).order("created_at", { ascending: false });
+    .select("slug, title, image_path, created_at, likes(count), comments(count)").eq("owner", p.id).eq("is_private", false).order("created_at", { ascending: false });
 
   box.innerHTML =
     '<div class="prof">' +
@@ -62,7 +63,7 @@
           '<div class="xp">' +
             '<img class="thumb" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
             '<div class="body">' +
-              '<div class="title">' + esc(x.title) + "</div>" +
+              '<div class="title">' + esc(x.title) + "</div>" + (function(x){var l=(x.likes&&x.likes[0]&&x.likes[0].count)||0,c=(x.comments&&x.comments[0]&&x.comments[0].count)||0;return '<div class="stats">♥ '+l+' · 💬 '+c+'</div>';})(x) +
               '<div class="actions"><a class="btn btn-sm btn-primary" href="' + esc(App.arLink(x.slug)) + '">✨ View in AR</a></div>' +
             "</div>" +
           "</div>").join("") + "</div>"

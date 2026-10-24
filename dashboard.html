@@ -18,6 +18,7 @@
   .top .card { margin: 0; }
   @media (max-width: 760px) { .top { grid-template-columns: 1fr; } }
   .plan-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .xp .stats { font-size: .85rem; color: var(--muted); margin-top: -4px; }
 </style>
 </head>
 <body>
@@ -336,7 +337,7 @@
   // ── experiences ────────────────────────────────────────────
   async function loadList() {
     const { data, error } = await sb.from("experiences")
-      .select("id, slug, title, image_path, mind_path, video_path, created_at, is_private")
+      .select("id, slug, title, image_path, mind_path, video_path, created_at, is_private, likes(count), comments(count)")
       .eq("owner", uid).order("created_at", { ascending: false });
     const list = $("list");
     if (error) { list.innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
@@ -348,7 +349,7 @@
       '<div class="xp" data-id="' + x.id + '">' +
         '<img class="thumb" loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
         '<div class="body">' +
-          '<div class="title">' + esc(x.title) + "</div>" +
+          '<div class="title">' + esc(x.title) + "</div>" + (function(x){var l=(x.likes&&x.likes[0]&&x.likes[0].count)||0,c=(x.comments&&x.comments[0]&&x.comments[0].count)||0;return '<div class="stats">♥ '+l+' · 💬 '+c+'</div>';})(x) +
           '<div class="row small muted" style="gap:8px">' + new Date(x.created_at).toLocaleDateString() +
             (x.is_private ? '<span class="pill private">🔒 Private</span>' : '<span class="pill">🌍 Public</span>') + "</div>" +
           '<div class="actions">' +

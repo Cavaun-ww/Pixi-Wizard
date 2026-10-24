@@ -588,7 +588,7 @@ body.desktop #target-img { max-height:26vh; }
       '<div class="main"><div class="who"><a href="' + link + '">' + esc(name) + '</a><span class="when">' + ago(c.created_at) + '</span></div>' +
       '<div class="txt">' + esc(c.body) + '</div>' +
       '<div class="acts">' + (canDelete ? '<button data-act="del">Delete</button>' : "") + (canReport ? '<button data-act="report">Report</button>' : "") + '</div></div>' +
-      '<button class="cl' + (on ? " on" : "") + '" data-act="clike" data-n="' + n + '"><span class="heart">' + (on ? "♥" : "♡") + '</span><span>' + (n || "") + '</span></button>' +
+      '<button class="cl' + (on ? " on" : "") + '" data-act="clike" data-n="' + n + '"><span class="heart">' + (on ? "♥" : "♡") + '</span><span>' + n + '</span></button>' +
     '</div>';
   }
   $("c-list").addEventListener("click", async function (e) {
@@ -599,7 +599,7 @@ body.desktop #target-img { max-height:26vh; }
       var on = !b.classList.contains("on"), n = +b.getAttribute("data-n") + (on ? 1 : -1);
       if (on && !isPro) return needPro("Liking comments", b, "c-need");
       b.classList.toggle("on", on); b.setAttribute("data-n", n);
-      b.innerHTML = '<span class="heart">' + (on ? "♥" : "♡") + '</span><span>' + (n || "") + '</span>';
+      b.innerHTML = '<span class="heart">' + (on ? "♥" : "♡") + '</span><span>' + n + '</span>';
       myCommentLikes[id] = on;
       var r = on ? await sb.from("comment_likes").insert({ user_id: me, comment_id: id })
                  : await sb.from("comment_likes").delete().eq("user_id", me).eq("comment_id", id);

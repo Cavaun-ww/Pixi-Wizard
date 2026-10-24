@@ -71,7 +71,7 @@
     return '<a class="tile" href="' + esc(App.arLink(x.slug)) + '" aria-label="' + esc(x.title) + ' — view in AR">' +
       '<img loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
       '<span class="ar">✨ AR</span>' +
-      (likes(x) ? '<span class="lk">♥ ' + likes(x) + "</span>" : "") +
+      '<span class="lk">♥ ' + likes(x) + " · 💬 " + ((x.comments && x.comments[0] && x.comments[0].count) || 0) + "</span>" +
       '<span class="shade"><div class="t">' + esc(x.title) + '</div>' + (who ? '<div class="b">' + esc(who) + "</div>" : "") + "</span>" +
     "</a>";
   }
@@ -84,7 +84,7 @@
     const myRun = runId;
     $("more").disabled = true;
     let q = sb.from("experiences")
-      .select("slug, title, image_path, created_at, profiles!owner(handle, display_name), likes(count)")
+      .select("slug, title, image_path, created_at, profiles!owner(handle, display_name), likes(count), comments(count)")
       .eq("is_private", false);
     if (term) {
       const ors = ["title.ilike.*" + term + "*"];
