@@ -34,6 +34,15 @@
     toastTimer = setTimeout(() => (el.className = el.className.replace("show", "")), isErr ? 5000 : 2600);
   }
 
+  function timeAgo(d) {
+    const s = Math.max(1, (Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 60) return "now";
+    if (s < 3600) return Math.floor(s / 60) + "m";
+    if (s < 86400) return Math.floor(s / 3600) + "h";
+    if (s < 604800) return Math.floor(s / 86400) + "d";
+    return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
   async function getSession() {
     const { data } = await sb.auth.getSession();
     return data.session;
@@ -209,7 +218,12 @@
     if (s) {
       nav.innerHTML =
         '<a class="link" href="explore.html">Explore</a>' +
+        '<a class="inbox-link" href="messages.html" aria-label="Messages">💬<span class="dot" id="inbox-dot" hidden></span></a>' +
         '<a class="btn btn-sm" href="dashboard.html">My page</a>';
+      sb.rpc("unread_count").then(({ data }) => {
+        const d = document.getElementById("inbox-dot");
+        if (d && data > 0) { d.hidden = false; d.textContent = data > 9 ? "9+" : data; }
+      });
     } else {
       nav.innerHTML =
         '<a class="link" href="explore.html">Explore</a>' +
@@ -346,7 +360,7 @@
 
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
-    getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
+    timeAgo, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
     renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme, applyBackground, BG_COLORS,
   };
 })();

@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261022-1"></script>
+<script src="config.js?v=20261023-1"></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -96,6 +96,40 @@ body.desktop #target-img { max-height:26vh; }
 .collage { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; margin-bottom:16px; }
 .collage img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px; border:1px solid var(--line); background:#000; }
 .pill-float.show { display:block; }
+
+/* likes + comments */
+.social { margin-top:22px; text-align:left; }
+.soc-bar { display:flex; gap:10px; justify-content:center; margin-bottom:18px; }
+.soc-bar button, .soc-bar a { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:999px; border:1px solid #3d2f66; background:#1d1538; color:var(--text); font:inherit; font-size:.95rem; cursor:pointer; text-decoration:none; }
+.soc-bar button:hover, .soc-bar a:hover { border-color:var(--accent); }
+#like-btn.on { border-color:#ff5fd2; background:#3a1440; }
+#like-btn.on .heart { color:#ff5fd2; }
+#like-btn.pop .heart { animation: pop .35s ease; display:inline-block; }
+@keyframes pop { 50% { transform: scale(1.5); } }
+.comments h3 { font-family:"Fredoka",sans-serif; font-weight:500; font-size:1.1rem; margin-bottom:10px; }
+.muted-n { color:var(--muted); font-weight:400; font-size:.95rem; }
+#c-form { display:flex; gap:8px; align-items:flex-end; margin-bottom:14px; }
+#c-input { flex:1; resize:none; min-height:42px; max-height:140px; padding:10px 14px; border-radius:18px; border:1px solid var(--line); background:#140d26; color:var(--text); font:inherit; font-size:16px; outline:none; }
+#c-input:focus { border-color:#ff5fd2; }
+#c-post { padding:10px 16px; border-radius:999px; border:0; background:var(--magic); color:#fff; font:inherit; font-weight:500; cursor:pointer; }
+#c-post:disabled { opacity:.5; }
+.c-signin { font-size:.9rem; color:var(--text-2); margin-bottom:14px; padding:12px; border:1px dashed var(--line); border-radius:14px; text-align:center; }
+.c-signin a { color:var(--accent-2); }
+.cm { display:flex; gap:10px; padding:10px 0; border-top:1px solid #1f1838; }
+.cm .av { width:32px; height:32px; border-radius:50%; flex:0 0 auto; overflow:hidden; display:grid; place-items:center; background:var(--magic); color:#1a0630; font-weight:600; font-size:.85rem; text-decoration:none; }
+.cm .av img { width:100%; height:100%; object-fit:cover; }
+.cm .main { flex:1; min-width:0; }
+.cm .who { font-size:.82rem; color:var(--text-2); }
+.cm .who a { color:var(--text); font-weight:500; text-decoration:none; }
+.cm .who .when { color:var(--muted); margin-left:6px; }
+.cm .txt { font-size:.93rem; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; margin-top:2px; }
+.cm .acts { display:flex; gap:14px; margin-top:4px; }
+.cm .acts button { background:none; border:0; padding:0; color:var(--muted); font:inherit; font-size:.78rem; cursor:pointer; }
+.cm .acts button:hover { color:var(--text); }
+.cm .cl { display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:0; color:var(--muted); cursor:pointer; font:inherit; font-size:.72rem; padding:2px 4px; }
+.cm .cl .heart { font-size:1rem; }
+.cm .cl.on { color:#ff5fd2; }
+.c-empty { color:var(--muted); font-size:.9rem; padding:8px 0 4px; }
 </style>
 </head>
 <body>
@@ -119,6 +153,21 @@ body.desktop #target-img { max-height:26vh; }
       <button id="share-btn" type="button">🔗 Share this AR</button>
       <a id="mypage-link" href="dashboard.html" hidden>My page</a>
     </div>
+    <div class="social" id="social" hidden>
+      <div class="soc-bar">
+        <button type="button" id="like-btn" aria-pressed="false"><span class="heart">♡</span> <span id="like-n">0</span></button>
+        <a id="msg-btn" href="#" hidden>💬 Message</a>
+      </div>
+      <div class="comments">
+        <h3>Comments <span id="c-n" class="muted-n"></span></h3>
+        <form id="c-form" hidden>
+          <textarea id="c-input" rows="1" maxlength="500" placeholder="Add a comment…"></textarea>
+          <button type="submit" id="c-post">Post</button>
+        </form>
+        <div id="c-signin" class="c-signin" hidden><a id="c-signin-link" href="auth.html">Sign in</a> to like and comment</div>
+        <div id="c-list"></div>
+      </div>
+    </div>
     <div class="desk" id="desk">
       <h2>📱 Open this on your phone</h2>
       <p>AR uses your phone's camera, so it only works on a phone or tablet. Point your phone's camera at this code to open it there:</p>
@@ -138,7 +187,7 @@ body.desktop #target-img { max-height:26vh; }
 <script>
 (function () {
   var C = window.APP_CONFIG;
-  var sb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+  var sb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
   var $ = function (id) { return document.getElementById(id); };
   var qs = new URLSearchParams(location.search);
   var slug = qs.get("x") || "";
@@ -206,7 +255,7 @@ body.desktop #target-img { max-height:26vh; }
   // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
-    var cols = "slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, profiles(handle, display_name, avatar_path)";
+    var cols = "id, owner, slug, title, image_path, mind_path, video_path, image_aspect, video_aspect, is_private, profiles(handle, display_name, avatar_path)";
 
     if (isExplore) {
       document.title = "Explore · " + C.SITE_NAME;
@@ -252,6 +301,7 @@ body.desktop #target-img { max-height:26vh; }
     $("step3").innerHTML = isGif(xp) ? "✨ The <b>GIF</b> plays right on top of it"
       : isPhoto(xp) ? "✨ The <b>photo</b> appears right on top of it"
       : "✨ The <b>video</b> plays right on top of it";
+    initSocial(xp);
     $("target-img").src = pub(xp.image_path);
     $("target-img").hidden = false;
     if (isNew) {
@@ -427,6 +477,125 @@ body.desktop #target-img { max-height:26vh; }
       remove: function () { this.el.removeObject3D("vid"); },
     });
   }
+
+
+  // ── likes + comments + message the creator ─────────────────
+  var me = null, post = null, isPro = false;
+  function esc(t) { return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function ago(d) {
+    var s = Math.max(1, (Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 60) return "now"; if (s < 3600) return Math.floor(s / 60) + "m";
+    if (s < 86400) return Math.floor(s / 3600) + "h"; if (s < 604800) return Math.floor(s / 86400) + "d";
+    return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  function needSignIn() { location.href = "auth.html?next=" + encodeURIComponent("ar.html?x=" + encodeURIComponent(post.slug)); }
+  function needPro(what) {
+    if (confirm(what + " is a Pro perk ✨ Go Pro to like posts and comments and message creators?")) location.href = "dashboard.html?upgrade=1";
+  }
+  function toastMsg(t) { setStatus(t, "err"); setTimeout(function () { setStatus(""); }, 3500); }
+
+  async function initSocial(xp) {
+    post = xp;
+    var s = await sb.auth.getSession();
+    me = s.data.session ? s.data.session.user.id : null;
+    if (me) { var pl = await sb.rpc("my_plan"); isPro = !!(pl.data && pl.data.is_pro); }
+    $("social").hidden = false;
+    var p = xp.profiles || {};
+    if (p.handle && me !== xp.owner) {
+      $("msg-btn").hidden = false;
+      $("msg-btn").textContent = "💬 Message " + (p.display_name || "@" + p.handle);
+      $("msg-btn").href = me ? "messages.html?to=" + encodeURIComponent(p.handle) : "auth.html?next=" + encodeURIComponent("messages.html?to=" + p.handle);
+    }
+    if (me) $("c-form").hidden = false;
+    else { $("c-signin").hidden = false; $("c-signin-link").href = "auth.html?next=" + encodeURIComponent("ar.html?x=" + post.slug); }
+    loadLikes(); loadComments();
+  }
+
+  async function loadLikes() {
+    var r = await sb.from("likes").select("user_id", { count: "exact", head: true }).eq("experience_id", post.id);
+    $("like-n").textContent = r.count || 0;
+    if (me) {
+      var m = await sb.from("likes").select("user_id").eq("experience_id", post.id).eq("user_id", me).maybeSingle();
+      setLiked(!!m.data);
+    }
+  }
+  function setLiked(on) { $("like-btn").classList.toggle("on", on); $("like-btn").setAttribute("aria-pressed", on); $("like-btn").querySelector(".heart").textContent = on ? "♥" : "♡"; }
+  $("like-btn").onclick = async function () {
+    if (!me) return needSignIn();
+    var on = !this.classList.contains("on"), n = +$("like-n").textContent;
+    if (on && !isPro) return needPro("Liking");
+    setLiked(on); $("like-n").textContent = Math.max(0, n + (on ? 1 : -1));
+    if (on) { this.classList.remove("pop"); void this.offsetWidth; this.classList.add("pop"); }
+    var r = on ? await sb.from("likes").insert({ user_id: me, experience_id: post.id })
+               : await sb.from("likes").delete().eq("user_id", me).eq("experience_id", post.id);
+    if (r.error && !/duplicate/i.test(r.error.message)) { setLiked(!on); $("like-n").textContent = n; toastMsg("Couldn't save your like. Try again."); }
+  };
+
+  var myCommentLikes = {};
+  async function loadComments() {
+    var r = await sb.from("comments")
+      .select("id, body, created_at, user_id, profiles(handle, display_name, avatar_path), comment_likes(count)")
+      .eq("experience_id", post.id).order("created_at", { ascending: true }).limit(300);
+    var list = r.data || [];
+    myCommentLikes = {};
+    if (me && list.length) {
+      var m = await sb.from("comment_likes").select("comment_id").eq("user_id", me).in("comment_id", list.map(function (c) { return c.id; }));
+      (m.data || []).forEach(function (x) { myCommentLikes[x.comment_id] = true; });
+    }
+    $("c-n").textContent = list.length ? list.length : "";
+    $("c-list").innerHTML = list.length ? list.map(commentHTML).join("") : '<div class="c-empty">No comments yet. Say something nice!</div>';
+  }
+  function commentHTML(c) {
+    var p = c.profiles || {}, name = p.display_name || (p.handle ? "@" + p.handle : "Someone");
+    var letter = name.replace("@", "").charAt(0).toUpperCase() || "?";
+    var link = p.handle ? "u.html?h=" + encodeURIComponent(p.handle) : "#";
+    var n = (c.comment_likes && c.comment_likes[0] && c.comment_likes[0].count) || 0, on = !!myCommentLikes[c.id];
+    var canDelete = me && (me === c.user_id || me === post.owner), canReport = me && me !== c.user_id;
+    return '<div class="cm" data-id="' + c.id + '">' +
+      '<a class="av" href="' + link + '">' + (p.avatar_path ? '<img alt="" src="' + pub(p.avatar_path) + '">' : esc(letter)) + '</a>' +
+      '<div class="main"><div class="who"><a href="' + link + '">' + esc(name) + '</a><span class="when">' + ago(c.created_at) + '</span></div>' +
+      '<div class="txt">' + esc(c.body) + '</div>' +
+      '<div class="acts">' + (canDelete ? '<button data-act="del">Delete</button>' : "") + (canReport ? '<button data-act="report">Report</button>' : "") + '</div></div>' +
+      '<button class="cl' + (on ? " on" : "") + '" data-act="clike" data-n="' + n + '"><span class="heart">' + (on ? "♥" : "♡") + '</span><span>' + (n || "") + '</span></button>' +
+    '</div>';
+  }
+  $("c-list").addEventListener("click", async function (e) {
+    var b = e.target.closest("button[data-act]"); if (!b) return;
+    var row = b.closest(".cm"), id = row.getAttribute("data-id"), act = b.getAttribute("data-act");
+    if (act === "clike") {
+      if (!me) return needSignIn();
+      var on = !b.classList.contains("on"), n = +b.getAttribute("data-n") + (on ? 1 : -1);
+      if (on && !isPro) return needPro("Liking");
+      b.classList.toggle("on", on); b.setAttribute("data-n", n);
+      b.innerHTML = '<span class="heart">' + (on ? "♥" : "♡") + '</span><span>' + (n || "") + '</span>';
+      myCommentLikes[id] = on;
+      var r = on ? await sb.from("comment_likes").insert({ user_id: me, comment_id: id })
+                 : await sb.from("comment_likes").delete().eq("user_id", me).eq("comment_id", id);
+      if (r.error && !/duplicate/i.test(r.error.message)) toastMsg("Couldn't save that. Try again.");
+    } else if (act === "del") {
+      if (!confirm("Delete this comment?")) return;
+      var d = await sb.from("comments").delete().eq("id", id);
+      if (d.error) return toastMsg("Couldn't delete it.");
+      loadComments();
+    } else if (act === "report") {
+      var why = prompt("What's wrong with this comment? (optional)");
+      if (why === null) return;
+      var rr = await sb.from("reports").insert({ reporter: me, kind: "comment", target_id: id, reason: why.slice(0, 500) || null });
+      b.textContent = rr.error ? "Couldn't report" : "Reported ✓"; b.disabled = true;
+    }
+  });
+  $("c-input").addEventListener("input", function () { this.style.height = "auto"; this.style.height = Math.min(this.scrollHeight, 140) + "px"; });
+  $("c-form").onsubmit = async function (e) {
+    e.preventDefault();
+    var body = $("c-input").value.trim();
+    if (!body) return;
+    $("c-post").disabled = true;
+    var r = await sb.from("comments").insert({ experience_id: post.id, user_id: me, body: body.slice(0, 500) });
+    $("c-post").disabled = false;
+    if (r.error) return toastMsg(/row-level/i.test(r.error.message) ? "You can't comment here right now (slow down, or the creator has limited comments)." : "Couldn't post your comment.");
+    $("c-input").value = ""; $("c-input").style.height = "";
+    loadComments();
+  };
 
   $("share-btn").onclick = function () {
     var url = shareUrl();

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messages · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0716">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="styles.css?v=20261023-1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=20261023-1"></script>
+<script src="app.js?v=20261023-1"></script>
+<style>
+  .wrap.chat-wrap { max-width: 640px; padding-bottom: 0; }
+  h1.pg { font-size: 1.8rem; margin-bottom: 14px; }
+  /* inbox */
+  .convo { display: flex; gap: 12px; align-items: center; padding: 12px 10px; border-radius: 14px; text-decoration: none; color: var(--text); }
+  .convo:hover { background: var(--card); }
+  .av { width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto; overflow: hidden; display: grid; place-items: center; background: var(--magic); color: #1a0630; font-weight: 600; text-decoration: none; }
+  .av img { width: 100%; height: 100%; object-fit: cover; }
+  .convo .mid { flex: 1; min-width: 0; }
+  .convo .nm { font-weight: 500; }
+  .convo .last { color: var(--muted); font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .convo.unread .last { color: var(--text); font-weight: 500; }
+  .convo .side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; font-size: .75rem; color: var(--muted); }
+  .convo .badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--pink); color: #fff; font-size: .7rem; font-weight: 600; display: grid; place-items: center; }
+  /* chat */
+  .chat-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .chat-head .back { text-decoration: none; color: var(--text-2); font-size: 1.4rem; padding: 0 6px 0 0; }
+  .chat-head .nm { flex: 1; min-width: 0; }
+  .chat-head .nm a { color: var(--text); text-decoration: none; font-weight: 500; }
+  .chat-head .nm .h { color: var(--muted); font-size: .82rem; }
+  .chat-head .av { width: 40px; height: 40px; }
+  .thread { display: flex; flex-direction: column; gap: 6px; padding: 16px 0; min-height: 45vh; }
+  .bubble { max-width: 78%; padding: 9px 14px; border-radius: 18px; font-size: .95rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bubble.them { align-self: flex-start; background: #1d1538; border: 1px solid var(--line); border-bottom-left-radius: 6px; }
+  .bubble.me { align-self: flex-end; background: linear-gradient(135deg, #c04fd8, #7c4dff); color: #fff; border-bottom-right-radius: 6px; }
+  .stamp { align-self: center; font-size: .72rem; color: var(--muted); margin: 8px 0 2px; }
+  .seen { align-self: flex-end; font-size: .72rem; color: var(--muted); margin-top: -2px; }
+  .composer { position: sticky; bottom: 0; display: flex; gap: 8px; align-items: flex-end; padding: 12px 0 18px; background: linear-gradient(transparent, var(--bg) 30%); }
+  .composer textarea { flex: 1; resize: none; min-height: 44px; max-height: 140px; padding: 11px 16px; border-radius: 22px; border: 1px solid var(--line); background: #140d26; color: var(--text); font: inherit; font-size: 16px; outline: none; }
+  .composer textarea:focus { border-color: var(--pink); }
+  .notice { text-align: center; color: var(--text-2); font-size: .92rem; padding: 16px; border: 1px dashed var(--line); border-radius: 16px; margin: 12px 0 20px; }
+  .notice .btn { margin-top: 10px; }
+  .menu-btn { background: none; border: 1px solid var(--line); color: var(--text-2); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .82rem; cursor: pointer; }
+  .menu-btn:hover { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<main class="wrap chat-wrap" id="main"><p class="muted" style="text-align:center;padding:60px 0">Loading…</p></main>
+
+<script>
+(async function () {
+  App.mountHeader();
+  const sb = App.sb, esc = App.esc, $ = (id) => document.getElementById(id);
+  const session = await App.requireAuth();
+  const me = session.user.id;
+  const main = $("main");
+  const to = (new URLSearchParams(location.search).get("to") || "").toLowerCase();
+  const avatar = (p, cls) => {
+    const name = p.display_name || "@" + (p.handle || "?");
+    return '<a class="av' + (cls ? " " + cls : "") + '" href="u.html?h=' + encodeURIComponent(p.handle || "") + '">' +
+      (p.avatar_path ? '<img alt="" src="' + esc(App.publicUrl(p.avatar_path)) + '">' : esc(name.replace("@", "").charAt(0).toUpperCase())) + "</a>";
+  };
+
+  // ── inbox ──────────────────────────────────────────────────
+  if (!to) {
+    const { data, error } = await sb.rpc("my_conversations");
+    if (error) { main.innerHTML = '<p class="muted" style="text-align:center;padding:40px 0">Couldn\'t load messages: ' + esc(error.message) + "</p>"; return; }
+    const rows = data || [];
+    main.innerHTML = '<h1 class="pg">Messages</h1>' + (rows.length
+      ? rows.map((c) =>
+          '<a class="convo' + (c.unread ? " unread" : "") + '" href="messages.html?to=' + encodeURIComponent(c.handle) + '">' +
+            avatar(c).replace(/^<a /, "<span ").replace(/<\/a>$/, "</span>").replace(/ href="[^"]*"/, "") +
+            '<div class="mid"><div class="nm">' + esc(c.display_name || "@" + c.handle) + (c.blocked ? ' <span class="muted small">· blocked</span>' : "") + "</div>" +
+            '<div class="last">' + (c.last_from_me ? "You: " : "") + esc(c.last_body) + "</div></div>" +
+            '<div class="side"><span>' + App.timeAgo(c.last_at) + "</span>" + (c.unread ? '<span class="badge">' + c.unread + "</span>" : "") + "</div>" +
+          "</a>").join("")
+      : '<div class="empty"><img src="logo-mark.png" alt="" class="float" style="width:80px;margin:0 auto"><p style="margin:12px 0 6px">No messages yet.</p><p class="muted small">Find a creator on Explore and tap 💬 Message on their page.</p><a class="btn btn-primary" style="margin-top:14px" href="explore.html">Explore</a></div>');
+    return;
+  }
+
+  // ── one chat ───────────────────────────────────────────────
+  const { data: them } = await sb.from("profiles").select("id, handle, display_name, avatar_path").eq("handle", to).maybeSingle();
+  if (!them) { main.innerHTML = '<div class="empty"><h2>Person not found</h2><a class="btn" style="margin-top:14px" href="messages.html">Back to messages</a></div>'; return; }
+  if (them.id === me) { location.replace("messages.html"); return; }
+  const name = them.display_name || "@" + them.handle;
+  document.title = name + " · Messages";
+
+  main.innerHTML =
+    '<div class="chat-head"><a class="back" href="messages.html" aria-label="Back">‹</a>' + avatar(them) +
+      '<div class="nm"><a href="u.html?h=' + encodeURIComponent(them.handle) + '">' + esc(name) + '</a><div class="h">@' + esc(them.handle) + "</div></div>" +
+      '<button class="menu-btn" id="block-btn">Block</button><button class="menu-btn" id="report-btn">Report</button></div>' +
+    '<div class="thread" id="thread"></div>' +
+    '<div id="gate"></div>' +
+    '<form class="composer" id="composer" hidden><textarea id="body" rows="1" maxlength="1000" placeholder="Message ' + esc(name) + '…"></textarea>' +
+      '<button class="btn btn-primary" id="send" type="submit">Send</button></form>';
+
+  let blocked = false, msgs = [];
+  async function refreshGate() {
+    const [{ data: b }, { data: can }, plan] = await Promise.all([
+      sb.from("blocks").select("blocked").eq("blocker", me).eq("blocked", them.id).maybeSingle(),
+      sb.rpc("can_message", { other: them.id }),
+      App.myPlan().catch(() => ({})),
+    ]);
+    blocked = !!b;
+    $("block-btn").textContent = blocked ? "Unblock" : "Block";
+    const gate = $("gate");
+    if (blocked) {
+      gate.innerHTML = '<div class="notice">You blocked ' + esc(name) + ". Unblock them to send messages.</div>";
+      $("composer").hidden = true;
+    } else if (!can) {
+      gate.innerHTML = plan.is_pro
+        ? '<div class="notice">You can\'t message ' + esc(name) + " right now.</div>"
+        : '<div class="notice">💬 Messaging creators is a <b>Pro</b> perk. You can always reply when someone messages you first.<br><button class="btn btn-primary btn-sm" id="go-pro">✨ Go Pro</button></div>';
+      if ($("go-pro")) $("go-pro").onclick = () => App.openUpgrade();
+      $("composer").hidden = true;
+    } else {
+      gate.innerHTML = "";
+      $("composer").hidden = false;
+    }
+  }
+
+  function render() {
+    const t = $("thread");
+    if (!msgs.length) { t.innerHTML = '<p class="muted small" style="text-align:center;margin:auto">Say hi to ' + esc(name) + " 👋</p>"; return; }
+    let html = "", lastTime = 0;
+    msgs.forEach((m) => {
+      const tm = new Date(m.created_at).getTime();
+      if (tm - lastTime > 30 * 60 * 1000) html += '<div class="stamp">' + new Date(m.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + "</div>";
+      lastTime = tm;
+      html += '<div class="bubble ' + (m.sender === me ? "me" : "them") + '">' + esc(m.body) + "</div>";
+    });
+    const last = msgs[msgs.length - 1];
+    if (last.sender === me && last.read_at) html += '<div class="seen">Seen</div>';
+    t.innerHTML = html;
+  }
+  const atBottom = () => window.innerHeight + window.scrollY >= document.body.scrollHeight - 80;
+  const toBottom = () => window.scrollTo(0, document.body.scrollHeight);
+
+  async function load() {
+    const { data } = await sb.from("messages").select("id, sender, recipient, body, created_at, read_at")
+      .or("and(sender.eq." + me + ",recipient.eq." + them.id + "),and(sender.eq." + them.id + ",recipient.eq." + me + ")")
+      .order("created_at", { ascending: true }).limit(500);
+    const fresh = data || [];
+    const changed = fresh.length !== msgs.length || (fresh.length && msgs.length && fresh[fresh.length - 1].read_at !== msgs[msgs.length - 1].read_at);
+    const stick = atBottom() || !msgs.length;
+    msgs = fresh;
+    if (changed || !$("thread").innerHTML) { render(); if (stick) toBottom(); }
+    if (msgs.some((m) => m.recipient === me && !m.read_at)) sb.rpc("mark_read", { other: them.id }).then(() => {});
+  }
+
+  await Promise.all([refreshGate(), load()]);
+  toBottom();
+  setInterval(() => { if (!document.hidden) load(); }, 4000); // check for new messages every few seconds
+
+  const box = $("body");
+  box.addEventListener("input", () => { box.style.height = "auto"; box.style.height = Math.min(box.scrollHeight, 140) + "px"; });
+  box.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !/iPhone|Android/i.test(navigator.userAgent)) { e.preventDefault(); $("composer").requestSubmit(); } });
+  $("composer").onsubmit = async (e) => {
+    e.preventDefault();
+    const body = box.value.trim();
+    if (!body) return;
+    $("send").disabled = true;
+    const { error } = await sb.from("messages").insert({ sender: me, recipient: them.id, body: body.slice(0, 1000) });
+    $("send").disabled = false;
+    if (error) { App.toast(/row-level/i.test(error.message) ? "Message not sent. You may be sending too fast, or can't message this person." : "Message not sent. Try again.", true); refreshGate(); return; }
+    box.value = ""; box.style.height = "";
+    await load(); toBottom();
+  };
+
+  $("block-btn").onclick = async () => {
+    if (!blocked && !confirm("Block " + name + "? They won't be able to message you or comment on your posts.")) return;
+    const r = blocked
+      ? await sb.from("blocks").delete().eq("blocker", me).eq("blocked", them.id)
+      : await sb.from("blocks").insert({ blocker: me, blocked: them.id });
+    if (r.error) return App.toast("Couldn't update that.", true);
+    App.toast(blocked ? "Unblocked" : "Blocked");
+    refreshGate();
+  };
+  $("report-btn").onclick = async () => {
+    const why = prompt("Tell us what's wrong (optional). We'll review this conversation.");
+    if (why === null) return;
+    const { error } = await sb.from("reports").insert({ reporter: me, kind: "user", target_id: them.id, reason: why.slice(0, 500) || null });
+    App.toast(error ? "Couldn't send the report." : "Thanks, we'll take a look.", !!error);
+  };
+})();
+</script>
+</body>
+</html>

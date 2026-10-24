@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261022-1">
+<link rel="stylesheet" href="styles.css?v=20261023-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261022-1"></script>
-<script src="app.js?v=20261022-1"></script>
+<script src="config.js?v=20261023-1"></script>
+<script src="app.js?v=20261023-1"></script>
 <style>
   .ex-hero { text-align: center; padding: 26px 0 26px; }
   .ex-hero .lead { max-width: 520px; margin: 10px auto 22px; }
@@ -27,6 +27,7 @@
   .tile .shade { position: absolute; inset: auto 0 0 0; padding: 26px 8px 7px; background: linear-gradient(transparent, rgba(0,0,0,.78)); }
   .tile .t { font-size: .82rem; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
   .tile .b { font-size: .72rem; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile .lk { position: absolute; top: 6px; left: 6px; font-size: .7rem; padding: 3px 7px; border-radius: 999px; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); }
   .tile .ar { position: absolute; top: 6px; right: 6px; font-size: .7rem; padding: 3px 7px; border-radius: 999px; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); }
   .search { position: relative; max-width: 340px; margin: 0 auto 18px; }
   .search input { width: 100%; padding: 9px 38px 9px 38px; border-radius: 999px; border: 1px solid var(--line); background: #140d26; color: var(--text); font: inherit; font-size: 16px; outline: none; }
@@ -63,12 +64,14 @@
   const PAGE = 30;
   let from = 0, all = [];
 
+  const likes = (x) => (x.likes && x.likes[0] && x.likes[0].count) || 0;
   function card(x) {
     const p = x.profiles || {};
     const who = p.handle ? (p.display_name || "@" + p.handle) : "";
     return '<a class="tile" href="' + esc(App.arLink(x.slug)) + '" aria-label="' + esc(x.title) + ' — view in AR">' +
       '<img loading="lazy" alt="" src="' + esc(App.publicUrl(x.image_path)) + '">' +
       '<span class="ar">✨ AR</span>' +
+      (likes(x) ? '<span class="lk">♥ ' + likes(x) + "</span>" : "") +
       '<span class="shade"><div class="t">' + esc(x.title) + '</div>' + (who ? '<div class="b">' + esc(who) + "</div>" : "") + "</span>" +
     "</a>";
   }
@@ -81,7 +84,7 @@
     const myRun = runId;
     $("more").disabled = true;
     let q = sb.from("experiences")
-      .select("slug, title, image_path, created_at, profiles(handle, display_name)")
+      .select("slug, title, image_path, created_at, profiles(handle, display_name), likes(count)")
       .eq("is_private", false);
     if (term) {
       const ors = ["title.ilike.*" + term + "*"];

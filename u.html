@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261022-1">
+<link rel="stylesheet" href="styles.css?v=20261023-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261022-1"></script>
-<script src="app.js?v=20261022-1"></script>
+<script src="config.js?v=20261023-1"></script>
+<script src="app.js?v=20261023-1"></script>
 <style>
   .prof { text-align: center; padding: 30px 0 34px; }
   .prof .avatar { width: 110px; height: 110px; margin: 0 auto 14px; font-size: 2.6rem; }
@@ -55,7 +55,7 @@
       "<h1 style=\"font-size:2rem\">" + esc(name) + "</h1>" +
       '<div class="muted">@' + esc(p.handle) + "</div>" +
       (p.bio ? '<p class="bio">' + esc(p.bio) + "</p>" : "") +
-      '<div class="row" style="justify-content:center;margin-top:16px"><button class="btn btn-sm" id="share">Share page</button></div>' +
+      '<div class="row" style="justify-content:center;margin-top:16px"><button class="btn btn-sm btn-primary" id="msg" hidden>💬 Message</button><button class="btn btn-sm" id="share">Share page</button><button class="btn btn-sm btn-ghost" id="block" hidden>Block</button></div>' +
     "</div>" +
     (xs && xs.length
       ? '<div class="grid">' + xs.map((x) =>
@@ -69,6 +69,31 @@
       : '<div class="empty">No AR experiences yet.</div>');
 
   $("share").onclick = () => App.share(name, location.href);
+
+  // message + block (not on your own page)
+  const session = await App.getSession();
+  const me = session ? session.user.id : null;
+  if (me !== p.id) {
+    $("msg").hidden = false;
+    $("msg").onclick = () => {
+      const to = "messages.html?to=" + encodeURIComponent(p.handle);
+      location.href = me ? to : "auth.html?next=" + encodeURIComponent(to);
+    };
+  }
+  if (me && me !== p.id) {
+    let blocked = false;
+    const { data: b } = await sb.from("blocks").select("blocked").eq("blocker", me).eq("blocked", p.id).maybeSingle();
+    const show = () => ($("block").textContent = blocked ? "Unblock" : "Block");
+    blocked = !!b; show(); $("block").hidden = false;
+    $("block").onclick = async () => {
+      if (!blocked && !confirm("Block " + name + "? They won't be able to message you or comment on your posts.")) return;
+      const r = blocked
+        ? await sb.from("blocks").delete().eq("blocker", me).eq("blocked", p.id)
+        : await sb.from("blocks").insert({ blocker: me, blocked: p.id });
+      if (r.error) return App.toast("Couldn't update that. Try again.", true);
+      blocked = !blocked; show(); App.toast(blocked ? "Blocked" : "Unblocked");
+    };
+  }
 })();
 </script>
 </body>

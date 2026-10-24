@@ -276,3 +276,23 @@ textarea.input { min-height: 90px; resize: vertical; }
 .collapse[open] .chev { transform: rotate(180deg); }
 .collapse-body { padding: 4px 16px 18px; border-top: 1px solid var(--line); }
 .collapse-body > .field:first-child { margin-top: 14px; }
+
+/* messages icon in the header */
+.inbox-link { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; text-decoration: none; font-size: 1.1rem; }
+.inbox-link:hover { background: var(--card); }
+.inbox-link .dot { position: absolute; top: 0; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--pink); color: #fff; font-size: .68rem; font-weight: 600; display: grid; place-items: center; }
+.inbox-link .dot[hidden] { display: none; }
+.brand-name { white-space: nowrap; }
+@media (max-width: 420px) {
+  .nav { gap: 2px; }
+  .nav a.link { padding: 8px 6px; }
+  .inbox-link { width: 34px; height: 34px; }
+  .site-header .brand-mark { width: 34px; height: 34px; }
+  .site-header .brand-name { font-size: 1.15rem; }
+}
+.site-header { gap: 10px; }
+@media (max-width: 380px) {
+  .site-header { padding-left: 12px; padding-right: 10px; }
+  .site-header .brand-name { font-size: 1.02rem; }
+  .site-header .brand-mark { width: 30px; height: 30px; }
+}
