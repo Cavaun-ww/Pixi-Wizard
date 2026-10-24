@@ -38,6 +38,16 @@
   .bubble { max-width: 78%; padding: 9px 14px; border-radius: 18px; font-size: .95rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
   .bubble.them { align-self: flex-start; background: #1d1538; border: 1px solid var(--line); border-bottom-left-radius: 6px; }
   .bubble.me { align-self: flex-end; background: linear-gradient(135deg, #c04fd8, #7c4dff); color: #fff; border-bottom-right-radius: 6px; }
+  .photo { display: block; max-width: 70%; border-radius: 18px; overflow: hidden; line-height: 0; border: 1px solid var(--line); background: #140d26; }
+  .photo.me { align-self: flex-end; border-bottom-right-radius: 6px; }
+  .photo.them { align-self: flex-start; border-bottom-left-radius: 6px; }
+  .photo img { width: 100%; max-height: 360px; min-height: 120px; min-width: 120px; object-fit: cover; display: block; }
+  .pic-btn { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: #140d26; font-size: 1.15rem; cursor: pointer; }
+  .pic-btn:hover { border-color: var(--pink); }
+  .pic-preview { position: relative; width: 96px; margin: 8px 0 0 auto; }
+  .pic-preview[hidden] { display: none; }
+  .pic-preview img { width: 96px; height: 96px; object-fit: cover; border-radius: 14px; border: 1px solid var(--line); display: block; }
+  .pic-preview button { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: #2a2048; color: #fff; cursor: pointer; font-size: .8rem; }
   .stamp { align-self: center; font-size: .72rem; color: var(--muted); margin: 8px 0 2px; }
   .seen { align-self: flex-end; font-size: .72rem; color: var(--muted); margin-top: -2px; }
   .composer { position: sticky; z-index: 1; bottom: 0; display: flex; gap: 8px; align-items: flex-end; padding: 12px 0 18px; background: linear-gradient(transparent, var(--bg) 30%); }
@@ -101,7 +111,8 @@
       '<button class="menu-btn" id="block-btn">Block</button><button class="menu-btn" id="report-btn">Report</button></div>' +
     '<div class="thread" id="thread"></div>' +
     '<div id="gate"></div>' +
-    '<form class="composer" id="composer" hidden><textarea id="body" rows="1" maxlength="1000" placeholder="Message ' + esc(name) + '…"></textarea>' +
+    '<div class="pic-preview" id="pic-preview" hidden><img id="pic-thumb" alt=""><button type="button" id="pic-x" aria-label="Remove photo">✕</button></div>' +
+    '<form class="composer" id="composer" hidden><label class="pic-btn" aria-label="Add a photo"><input type="file" id="pic" accept="image/*" hidden>📷</label><textarea id="body" rows="1" maxlength="1000" placeholder="Message ' + esc(name) + '…"></textarea>' +
       '<button class="btn btn-primary" id="send" type="submit">Send</button></form><div class="need" id="need"></div>';
 
   let blocked = false, msgs = [], needPro = false, needTimer;
@@ -149,17 +160,34 @@
       const tm = new Date(m.created_at).getTime();
       if (tm - lastTime > 30 * 60 * 1000) html += '<div class="stamp">' + new Date(m.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + "</div>";
       lastTime = tm;
-      html += '<div class="bubble ' + (m.sender === me ? "me" : "them") + '">' + esc(m.body) + "</div>";
+      const who = m.sender === me ? "me" : "them";
+      if (m.image_path) html += '<a class="photo ' + who + '" target="_blank" data-path="' + esc(m.image_path) + '"><img alt="Photo" data-path="' + esc(m.image_path) + '"' + (urls[m.image_path] ? ' src="' + esc(urls[m.image_path]) + '"' : "") + "></a>";
+      if (m.body && m.body.trim()) html += '<div class="bubble ' + who + '">' + esc(m.body) + "</div>";
     });
     const last = msgs[msgs.length - 1];
     if (last.sender === me && last.read_at) html += '<div class="seen">Seen</div>';
     t.innerHTML = html;
+    fillPhotos();
+  }
+  // message photos are private: get short-lived links only the two of you can use
+  const urls = {};
+  async function fillPhotos() {
+    const need = [...new Set(msgs.filter((m) => m.image_path && !urls[m.image_path]).map((m) => m.image_path))];
+    if (need.length) {
+      const { data } = await sb.storage.from("dm").createSignedUrls(need, 60 * 60 * 6);
+      (data || []).forEach((d) => { if (d.signedUrl) urls[d.path] = d.signedUrl; });
+    }
+    document.querySelectorAll("#thread [data-path]").forEach((el) => {
+      const u = urls[el.getAttribute("data-path")]; if (!u) return;
+      if (el.tagName === "IMG") { if (el.getAttribute("src") !== u) { el.onload = () => { if (atBottom() || el.closest(".photo") === document.querySelector("#thread .photo:last-of-type")) toBottom(); }; el.src = u; } }
+      else el.href = u;
+    });
   }
   const atBottom = () => window.innerHeight + window.scrollY >= document.body.scrollHeight - 80;
   const toBottom = () => window.scrollTo(0, document.body.scrollHeight);
 
   async function load() {
-    const { data } = await sb.from("messages").select("id, sender, recipient, body, created_at, read_at")
+    const { data } = await sb.from("messages").select("id, sender, recipient, body, image_path, created_at, read_at")
       .or("and(sender.eq." + me + ",recipient.eq." + them.id + "),and(sender.eq." + them.id + ",recipient.eq." + me + ")")
       .order("created_at", { ascending: true }).limit(500);
     const fresh = data || [];
@@ -178,16 +206,57 @@
   box.addEventListener("focus", () => { if (needPro) flagPro(); });
   box.addEventListener("input", () => { box.style.height = "auto"; box.style.height = Math.min(box.scrollHeight, 140) + "px"; });
   box.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !/iPhone|Android/i.test(navigator.userAgent)) { e.preventDefault(); $("composer").requestSubmit(); } });
+  // ── photos ──
+  let pic = null; // { blob, type, ext }
+  function shrinkPhoto(file) {
+    return new Promise((resolve, reject) => {
+      if (file.type === "image/gif") { // keep GIFs animated
+        if (file.size > 10 * 1048576) return reject(new Error("That GIF is over 10 MB."));
+        return resolve({ blob: file, type: "image/gif", ext: "gif" });
+      }
+      const img = new Image();
+      img.onload = () => {
+        const max = 1600, s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob((b) => b ? resolve({ blob: b, type: "image/jpeg", ext: "jpg" }) : reject(new Error("Couldn't read that photo.")), "image/jpeg", 0.85);
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => reject(new Error("Couldn't read that photo. Try a JPG or PNG."));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  function clearPic() { pic = null; $("pic").value = ""; $("pic-preview").hidden = true; }
+  $("pic").addEventListener("click", (e) => { if (needPro) { e.preventDefault(); flagPro(); } });
+  $("pic").addEventListener("change", async () => {
+    const f = $("pic").files[0]; if (!f) return;
+    try {
+      pic = await shrinkPhoto(f);
+      $("pic-thumb").src = URL.createObjectURL(pic.blob);
+      $("pic-preview").hidden = false;
+      toBottom();
+    } catch (err) { App.toast(err.message, true); clearPic(); }
+  });
+  $("pic-x").onclick = clearPic;
+
   $("composer").onsubmit = async (e) => {
     e.preventDefault();
     if (needPro) return flagPro();
     const body = box.value.trim();
-    if (!body) return;
+    if (!body && !pic) return;
     $("send").disabled = true;
-    const { error } = await sb.from("messages").insert({ sender: me, recipient: them.id, body: body.slice(0, 1000) });
-    $("send").disabled = false;
+    let image_path = null;
+    if (pic) {
+      $("send").textContent = "Sending…";
+      image_path = me + "/" + them.id + "/" + crypto.randomUUID() + "." + pic.ext;
+      const up = await sb.storage.from("dm").upload(image_path, pic.blob, { contentType: pic.type, upsert: false });
+      if (up.error) { $("send").disabled = false; $("send").textContent = "Send"; App.toast("Photo didn't upload. Try again.", true); return; }
+    }
+    const { error } = await sb.from("messages").insert({ sender: me, recipient: them.id, body: body.slice(0, 1000), image_path });
+    $("send").disabled = false; $("send").textContent = "Send";
     if (error) { App.toast(/row-level/i.test(error.message) ? "Message not sent. You may be sending too fast, or can't message this person." : "Message not sent. Try again.", true); refreshGate(); return; }
-    box.value = ""; box.style.height = "";
+    box.value = ""; box.style.height = ""; clearPic();
     await load(); toBottom();
   };
 
