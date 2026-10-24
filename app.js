@@ -218,8 +218,7 @@
     if (s) {
       nav.innerHTML =
         '<a class="link" href="explore.html">Explore</a>' +
-        '<a class="inbox-link" href="messages.html" aria-label="Messages">💬<span class="dot" id="inbox-dot" hidden></span></a>' +
-        '<a class="btn btn-sm" href="dashboard.html">My page</a>';
+        '<a class="btn btn-sm my-btn" href="dashboard.html">My page<span class="dot" id="inbox-dot" hidden></span></a>';
       sb.rpc("unread_count").then(({ data }) => {
         const d = document.getElementById("inbox-dot");
         if (d && data > 0) { d.hidden = false; d.textContent = data > 9 ? "9+" : data; }
