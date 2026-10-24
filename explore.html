@@ -128,7 +128,7 @@
     $("near").disabled = true; $("near").textContent = "Finding you…";
     let me;
     try { me = await App.hereNow(); }
-    catch (e) { $("near").disabled = false; $("near").textContent = "📍 Near me"; return App.toast(e.message, true); }
+    catch (e) { $("near").disabled = false; $("near").textContent = "📍 Near me"; return App.toast(/blocked/.test(e.message) ? "Location is off for this site. Turn it on in your phone's settings to use Near me." : e.message, true); }
     const myRun = ++runId;
     $("q").value = ""; $("clear").hidden = true; term = "";
     const { data, error } = await sb.from("experiences").select(COLS).eq("is_private", false).not("lat", "is", null).limit(500);
