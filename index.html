@@ -3,313 +3,273 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{site} — make your photos come alive</title>
-<meta name="description" content="Add videos, GIFs and magic to any printed photo. Anyone who points their phone at it sees it come alive. No app needed.">
+<title>{site} — bring any photo to life</title>
+<meta name="description" content="Upload a photo and add a video, GIF or photo on top. Anyone who points their phone at it sees it come to life. No app needed.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#241a5c">
+<meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,800;1,9..144,700&family=Fredoka:wght@500;600&family=Outfit:wght@300;400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261025-11">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="styles.css?v=20261025-12">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261025-11"></script>
-<script src="app.js?v=20261025-11"></script>
+<script src="config.js?v=20261025-12"></script>
+<script src="app.js?v=20261025-12"></script>
+<script src="icons.js?v=20261025-12" defer></script>
 <style>
-  /* ── bright homepage theme ── */
-  body.home {
-    --ink: #1c1446; --ink-2: #4a4170; --cream: #fbf6ef; --paper: #fffdf9; --navy: #241a5c; --navy-2: #2f2378;
-    --coral: #ff6a4d; --coral-2: #ff8a5c; --lime: #d9f45e; --pinkish: #f7d6ff; --line-l: #ece3d6;
-    background: var(--cream); color: var(--ink); font-family: "Outfit", system-ui, sans-serif; font-weight: 400;
+  :root { --cream: #fbf6ef; --ink: #1c1446; --ink-2: #554a7d; --line-l: #ece3d6; }
+  body.home { background: var(--cream); }
+  .home main { padding: 0; max-width: none; }
+  .wrapx { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── purple hero that fades into the light page ── */
+  .hero-zone {
+    background:
+      radial-gradient(700px 420px at 85% 10%, rgba(255,95,210,.22), transparent 60%),
+      radial-gradient(600px 420px at 5% 40%, rgba(124,77,255,.30), transparent 60%),
+      linear-gradient(180deg, #0b0716 0%, #1d1240 45%, #3a2470 72%, #b49ad8 90%, var(--cream) 100%);
+    padding: 30px 0 150px;
   }
-  .home a { color: inherit; }
-  .serif { font-family: "Fraunces", Georgia, serif; font-weight: 800; letter-spacing: -.02em; }
-  .wrapx { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
-
-  /* top bar */
-  .topbar { position: sticky; top: 0; z-index: 50; padding: 10px 0; background: linear-gradient(var(--navy) 60%, transparent); }
-  .topbar .bar { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 18px; padding: 10px 12px 10px 16px; box-shadow: 0 10px 30px -18px rgba(20,10,60,.5); }
-  .topbar .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
-  .topbar .logo img { width: 34px; height: 34px; }
-  .topbar .logo span { font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.25rem; background: linear-gradient(120deg,#ff9a3c,#ff5fd2 45%,#7c4dff); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .topbar nav { display: flex; gap: 22px; margin: 0 auto; font-weight: 500; font-size: .95rem; }
-  .topbar nav a { text-decoration: none; color: var(--ink); }
-  .topbar nav a:hover { color: var(--coral); }
-  .cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: 999px; border: 0; background: var(--coral); color: #fff !important; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; box-shadow: 0 10px 24px -10px rgba(255,106,77,.8); transition: transform .15s, background .15s; }
-  .cta:hover { background: #ff5a3a; transform: translateY(-1px); }
-  .cta svg { width: 18px; height: 18px; }
-  .topbar .cta { padding: 10px 18px; font-size: .92rem; }
-  .ghost-l { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 999px; border: 2px solid rgba(255,255,255,.85); color: #fff !important; text-decoration: none; font-weight: 600; }
-  .ghost-l:hover { background: rgba(255,255,255,.1); }
-  .ghost-d { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; border: 2px solid var(--ink); color: var(--ink) !important; text-decoration: none; font-weight: 600; background: transparent; }
-  .ghost-d:hover { background: var(--ink); color: #fff !important; }
-  @media (max-width: 760px) { .topbar nav { margin: 0 0 0 auto; } .topbar nav a:not(#nav-mine) { display: none; } .topbar .logo span { font-size: 1.1rem; } }
-
-  /* hero */
-  .hero2 { background: var(--navy); color: #fff; position: relative; overflow: hidden; margin-top: -64px; padding: 96px 0 120px; }
-  .hero2::before { content: ""; position: absolute; inset: 0; background: radial-gradient(600px 400px at 85% 30%, rgba(255,95,210,.28), transparent 60%), radial-gradient(500px 400px at 10% 90%, rgba(124,77,255,.35), transparent 60%); }
-  .hero2 .grid2 { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 30px; align-items: center; }
-  .kicker { font-size: .78rem; letter-spacing: .22em; text-transform: uppercase; color: #cfc6ff; font-weight: 500; }
-  .hero2 h1 { font-family: "Fraunces", Georgia, serif; font-weight: 800; font-size: clamp(2.6rem, 6.4vw, 5rem); line-height: .98; letter-spacing: -.03em; margin: 14px 0 18px; color: #fff; }
-  .hero2 h1 em { font-style: italic; color: var(--lime); }
-  .hero2 .sub { font-size: 1.2rem; color: #e7e2ff; max-width: 520px; line-height: 1.45; }
-  .hero2 .btns { display: flex; gap: 12px; flex-wrap: wrap; margin: 26px 0 22px; }
-  .hero2 .btns .cta { padding: 15px 26px; font-size: 1.05rem; }
-  .trust { display: flex; gap: 20px; flex-wrap: wrap; font-size: .88rem; color: #dcd6ff; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 26px; align-items: center; }
+  .hero-txt { text-align: left; }
+  .logo-wrap { position: relative; width: min(300px, 70vw); margin: 0 0 6px; }
+  .hero-logo { width: 100%; filter: drop-shadow(0 10px 40px rgba(168,85,247,.45)); }
+  .float { animation: float 4.5s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translateY(0) rotate(-1deg) } 50% { transform: translateY(-10px) rotate(1deg) } }
+  .hero-txt h1 { margin-top: 16px; font-size: clamp(2.1rem, 5vw, 3.4rem); line-height: 1.08; }
+  .hero-txt h1 em { font-style: normal; background: var(--magic); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero-txt .lead { max-width: 540px; margin: 16px 0 24px; }
+  .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .trust { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 22px; font-size: .9rem; color: var(--text-2); }
   .trust span { display: inline-flex; align-items: center; gap: 7px; }
-  .trust svg { width: 17px; height: 17px; }
 
-  /* hero visual: printed card + phone */
-  .visual { position: relative; height: 470px; }
-  .print { position: absolute; left: 4%; top: 40px; width: 52%; aspect-ratio: 3/4; background: #fff; padding: 10px 10px 34px; border-radius: 6px; transform: rotate(-7deg); box-shadow: 0 30px 60px -20px rgba(0,0,0,.6); }
+  /* printed photo + phone */
+  .visual { position: relative; height: 460px; }
+  .print { position: absolute; left: 2%; top: 46px; width: 52%; aspect-ratio: 3/4; background: #fff; padding: 10px 10px 34px; border-radius: 6px; transform: rotate(-7deg); box-shadow: 0 30px 60px -20px rgba(0,0,0,.7); }
   .print img { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; display: block; }
-  .phone { position: absolute; right: 6%; top: 0; width: 46%; aspect-ratio: 9/18.5; background: #0d0b16; border-radius: 34px; padding: 9px; box-shadow: 0 40px 70px -25px rgba(0,0,0,.75), inset 0 0 0 2px #3a335a; transform: rotate(5deg); }
+  .phone { position: absolute; right: 4%; top: 0; width: 46%; aspect-ratio: 9/18.5; background: #0d0b16; border-radius: 34px; padding: 9px; box-shadow: 0 40px 70px -25px rgba(0,0,0,.8), inset 0 0 0 2px #3a335a, 0 0 60px -10px rgba(168,85,247,.5); transform: rotate(5deg); }
   .phone .screen { position: relative; width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: #000; }
-  .phone .screen img.bgp { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.15) brightness(.9); }
-  .phone .screen video { position: absolute; left: 9%; right: 9%; top: 22%; width: 82%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 0 30px rgba(255,95,210,.8); animation: popin 3.6s ease-in-out infinite; }
+  .phone .screen img.bgp { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.85); }
+  .phone .screen video { position: absolute; left: 9%; width: 82%; top: 24%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 0 30px rgba(255,95,210,.8); animation: popin 3.6s ease-in-out infinite; }
   @keyframes popin { 0%,12% { opacity: 0; transform: scale(.85) } 25%,88% { opacity: 1; transform: scale(1) } 100% { opacity: 0 } }
   .phone .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 34%; height: 16px; background: #0d0b16; border-radius: 999px; z-index: 2; }
-  .phone .scan { position: absolute; left: 12%; right: 12%; top: 20%; height: 2px; background: var(--lime); box-shadow: 0 0 12px var(--lime); animation: scan 3.6s linear infinite; }
-  @keyframes scan { 0% { top: 20% } 25% { top: 60%; opacity: 1 } 26%,100% { opacity: 0 } }
-  .badge-lime { position: absolute; right: -2%; top: 24px; background: var(--lime); color: var(--ink); font-family: "Fredoka", sans-serif; font-weight: 600; padding: 10px 16px; border-radius: 16px; transform: rotate(10deg); box-shadow: 0 10px 20px -10px rgba(0,0,0,.5); line-height: 1.05; text-align: center; font-size: .95rem; }
-  .scanme { position: absolute; left: 44%; bottom: 40px; width: 92px; height: 92px; border-radius: 50%; background: #a79bff; color: var(--ink); display: grid; place-items: center; font-family: "Fredoka", sans-serif; font-weight: 600; font-size: .8rem; transform: rotate(-12deg); box-shadow: 0 10px 25px -10px rgba(0,0,0,.6); text-align: center; line-height: 1.1; }
-  .scanme svg { width: 34px; height: 34px; display: block; margin: 0 auto 2px; }
-  .arrow { position: absolute; left: 47%; top: 70px; width: 70px; color: var(--lime); }
-  .deco { position: absolute; color: var(--lime); }
+  .phone .scan { position: absolute; left: 12%; right: 12%; top: 20%; height: 2px; background: #ff5fd2; box-shadow: 0 0 12px #ff5fd2; animation: scan 3.6s linear infinite; }
+  @keyframes scan { 0% { top: 20% } 25% { top: 62%; opacity: 1 } 26%,100% { opacity: 0 } }
+  .tag-magic { position: absolute; right: -1%; top: 22px; background: var(--magic); color: #1a0630; font-family: var(--fun); font-weight: 600; padding: 9px 15px; border-radius: 16px; transform: rotate(10deg); box-shadow: 0 10px 24px -10px rgba(255,95,210,.8); text-align: center; line-height: 1.05; }
+  .scanme { position: absolute; left: 42%; bottom: 36px; width: 90px; height: 90px; border-radius: 50%; background: #1d1538; border: 2px solid #ff5fd2; color: #fff; display: grid; place-items: center; font-family: var(--fun); font-weight: 600; font-size: .78rem; transform: rotate(-12deg); box-shadow: 0 10px 25px -10px rgba(0,0,0,.6); text-align: center; line-height: 1.1; }
+  .scanme i { display: block; font-size: 1.9rem; margin-bottom: 2px; }
+  .visual .sparkle { position: absolute; }
   @media (max-width: 860px) {
-    .hero2 { padding: 84px 0 110px; }
-    .hero2 .grid2 { grid-template-columns: 1fr; }
-    .visual { height: 360px; max-width: 440px; margin: 10px auto 0; width: 100%; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-txt { text-align: center; }
+    .logo-wrap { margin: 0 auto 6px; }
+    .hero-txt .lead { margin-left: auto; margin-right: auto; }
+    .hero-btns, .trust { justify-content: center; }
+    .visual { height: 360px; max-width: 430px; width: 100%; margin: 6px auto 0; }
   }
 
-  /* steps strip */
-  .steps2 { position: relative; z-index: 2; margin-top: -70px; }
-  .steps2 .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; background: var(--paper); border-radius: 26px; padding: 16px; box-shadow: 0 30px 60px -35px rgba(30,15,80,.45); }
+  /* ── light sections ── */
+  .light { color: var(--ink); }
+  .light h2, .light h3 { color: var(--ink); }
+  .steps3 { position: relative; z-index: 2; margin-top: -100px; }
+  .steps3 .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; background: #fffdf9; border-radius: 28px; padding: 14px; box-shadow: 0 30px 60px -30px rgba(30,15,80,.5); }
   .st { display: flex; gap: 14px; align-items: flex-start; padding: 18px; border-radius: 20px; background: #fff; border: 1px solid var(--line-l); }
-  .st .n { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-family: "Fraunces", serif; font-weight: 800; font-size: 1.2rem; }
-  .st:nth-child(1) .n { background: #ead9ff; } .st:nth-child(2) .n { background: var(--lime); } .st:nth-child(3) .n { background: #f6c8ff; }
-  .st h3 { font-family: "Fraunces", serif; font-weight: 800; font-size: 1.25rem; color: var(--ink); margin: 2px 0 4px; }
+  .st .n { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-family: var(--fun); font-weight: 600; font-size: 1.15rem; color: #fff; background: var(--magic); box-shadow: 0 6px 16px -6px rgba(255,95,210,.8); }
+  .st h3 { font-size: 1.2rem; margin: 2px 0 4px; }
   .st p { color: var(--ink-2); font-size: .95rem; line-height: 1.4; }
-  .st .ill { margin-left: auto; flex: 0 0 auto; width: 64px; height: 64px; }
-  @media (max-width: 860px) { .steps2 .row3 { grid-template-columns: 1fr; } }
+  .st .ill { margin-left: auto; flex: 0 0 auto; font-size: 2.7rem; line-height: 1; }
+  @media (max-width: 860px) { .steps3 .row3 { grid-template-columns: 1fr; } }
 
-  /* sections */
-  .sec { padding: 70px 0 10px; }
-  .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
-  .eyebrow { font-size: .78rem; letter-spacing: .22em; text-transform: uppercase; font-weight: 600; color: var(--ink-2); }
-  .sec h2 { font-family: "Fraunces", Georgia, serif; font-weight: 800; font-size: clamp(1.9rem, 4vw, 2.7rem); letter-spacing: -.02em; color: var(--ink); margin-top: 6px; line-height: 1.05; }
+  .sec { padding: 64px 0 6px; }
+  .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+  .eyebrow { font-size: .78rem; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; color: #a855f7; }
+  .sec h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); margin-top: 4px; line-height: 1.1; }
+  .sec h2 .magic-text { display: inline; }
+  .btn-ink { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; border: 2px solid var(--ink); color: var(--ink); text-decoration: none; font-weight: 500; }
+  .btn-ink:hover { background: var(--ink); color: #fff; }
 
-  /* examples (real creations) */
-  .examples { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(210px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .examples { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .examples::-webkit-scrollbar { display: none; }
-  .ex { position: relative; scroll-snap-align: start; aspect-ratio: 3/4; border-radius: 20px; overflow: hidden; background: #ddd; text-decoration: none; box-shadow: 0 20px 40px -28px rgba(20,10,60,.7); }
+  @media (max-width: 600px) { .examples { grid-auto-columns: 70%; } }
+  .ex { position: relative; scroll-snap-align: start; aspect-ratio: 3/4; border-radius: 22px; overflow: hidden; background: #e9e1f5; text-decoration: none; box-shadow: 0 20px 40px -26px rgba(20,10,60,.7); }
   .ex img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
   .ex:hover img { transform: scale(1.04); }
   .ex img.blurred { filter: blur(18px); transform: scale(1.2); }
-  .ex .play { position: absolute; left: 50%; top: 45%; transform: translate(-50%,-50%); width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,.9); display: grid; place-items: center; box-shadow: 0 8px 20px rgba(0,0,0,.35); }
-  .ex .play svg { width: 22px; height: 22px; margin-left: 3px; color: var(--ink); }
-  .ex .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 14px 12px; background: linear-gradient(transparent, rgba(10,6,30,.85)); color: #fff; }
+  .ex .play { position: absolute; left: 50%; top: 45%; transform: translate(-50%,-50%); width: 54px; height: 54px; border-radius: 50%; background: var(--magic); display: grid; place-items: center; box-shadow: 0 8px 22px rgba(168,85,247,.55); color: #fff; }
+  .ex .play svg { width: 20px; height: 20px; margin-left: 3px; }
+  .ex .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 14px 12px; background: linear-gradient(transparent, rgba(11,7,22,.88)); color: #fff; }
   .ex .cap b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ex .cap span { font-size: .82rem; opacity: .85; }
   .ex-empty { padding: 34px; border-radius: 20px; border: 2px dashed var(--line-l); text-align: center; color: var(--ink-2); grid-column: 1 / -1; }
 
-  /* ideas */
   .ideas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
-  .idea { background: #fff; border: 1px solid var(--line-l); border-radius: 20px; padding: 18px 14px; text-align: center; }
-  .idea .ic { width: 52px; height: 52px; border-radius: 16px; margin: 0 auto 10px; display: grid; place-items: center; }
-  .idea .ic svg { width: 28px; height: 28px; }
-  .idea b { display: block; font-weight: 600; }
+  .idea { background: #fff; border: 1px solid var(--line-l); border-radius: 22px; padding: 20px 12px; text-align: center; transition: transform .2s, box-shadow .2s; }
+  .idea:hover { transform: translateY(-3px); box-shadow: 0 16px 30px -22px rgba(30,15,80,.6); }
+  .idea .ic { width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 10px; display: grid; place-items: center; font-size: 1.75rem; background: #1d1538; }
+  .idea b { display: block; font-weight: 600; font-family: var(--fun); font-size: 1.05rem; }
   .idea span { font-size: .85rem; color: var(--ink-2); }
   @media (max-width: 900px) { .ideas { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 520px) { .ideas { grid-template-columns: repeat(2, 1fr); } }
 
-  /* pricing */
-  .plans2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 820px; }
-  .plan2 { background: #fff; border: 1px solid var(--line-l); border-radius: 26px; padding: 26px; display: flex; flex-direction: column; gap: 14px; }
-  .plan2.pro { background: var(--navy); color: #fff; border: 0; position: relative; }
-  .plan2 h3 { font-family: "Fraunces", serif; font-weight: 800; font-size: 1.5rem; }
-  .plan2 .price { font-family: "Fraunces", serif; font-weight: 800; font-size: 2.6rem; }
-  .plan2 .price small { font-family: "Outfit", sans-serif; font-weight: 400; font-size: 1rem; opacity: .7; }
-  .plan2 ul { list-style: none; display: grid; gap: 9px; }
-  .plan2 li { display: flex; gap: 10px; align-items: flex-start; }
-  .plan2 li::before { content: ""; flex: 0 0 auto; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: #e9ffd0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.5l3 3 6-7' fill='none' stroke='%231c1446' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat; }
-  .plan2.pro li::before { background-color: var(--lime); }
-  .plan2 .cta, .plan2 .ghost-d { margin-top: auto; justify-content: center; }
-  .plan2 .tagp { position: absolute; top: 18px; right: 18px; background: var(--lime); color: var(--ink); font-weight: 600; font-size: .78rem; padding: 5px 10px; border-radius: 999px; }
-  @media (max-width: 700px) { .plans2 { grid-template-columns: 1fr; } }
+  .plans3 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 820px; }
+  .pl { background: #fff; border: 1px solid var(--line-l); border-radius: 26px; padding: 26px; display: flex; flex-direction: column; gap: 14px; }
+  .pl.pro { background: linear-gradient(160deg, #2a1448, #120c22); color: #fff; border: 1px solid #a855f7; box-shadow: 0 24px 50px -24px rgba(168,85,247,.7); position: relative; }
+  .pl.pro h3 { color: #fff; }
+  .pl h3 { font-size: 1.4rem; }
+  .pl .price { font-family: var(--fun); font-weight: 600; font-size: 2.5rem; }
+  .pl .price small { font-family: "Outfit", sans-serif; font-weight: 400; font-size: 1rem; opacity: .7; }
+  .pl ul { list-style: none; display: grid; gap: 9px; }
+  .pl li { display: flex; gap: 10px; color: var(--ink-2); }
+  .pl.pro li { color: #e7dcff; }
+  .pl li::before { content: "✓"; font-weight: 700; color: #a855f7; }
+  .pl.pro li::before { color: #ff9ce6; }
+  .pl .btn { margin-top: auto; }
+  .pl .tagp { position: absolute; top: 18px; right: 18px; }
+  @media (max-width: 700px) { .plans3 { grid-template-columns: 1fr; } }
 
-  /* FAQ */
   .faq { max-width: 820px; display: grid; gap: 10px; }
   .faq details { background: #fff; border: 1px solid var(--line-l); border-radius: 18px; padding: 16px 20px; }
-  .faq summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  .faq summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; color: var(--ink); }
   .faq summary::-webkit-details-marker { display: none; }
-  .faq summary::after { content: "+"; font-size: 1.3rem; line-height: 1; color: var(--coral); }
+  .faq summary::after { content: "+"; font-size: 1.3rem; line-height: 1; background: var(--magic); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
   .faq details[open] summary::after { content: "–"; }
   .faq p { margin-top: 10px; color: var(--ink-2); line-height: 1.5; }
 
-  /* final band */
-  .band { margin: 70px 0 0; background: var(--navy); color: #fff; padding: 60px 0; position: relative; overflow: hidden; text-align: center; }
-  .band::before { content: ""; position: absolute; inset: 0; background: radial-gradient(500px 300px at 20% 0%, rgba(255,95,210,.3), transparent 60%), radial-gradient(500px 300px at 85% 100%, rgba(217,244,94,.18), transparent 60%); }
-  .band > * { position: relative; }
-  .band h2 { font-family: "Fraunces", serif; font-weight: 800; font-size: clamp(2rem, 4.5vw, 3.2rem); letter-spacing: -.02em; }
-  .band h2 em { font-style: italic; color: var(--lime); }
-  .band p { color: #dcd6ff; margin: 10px 0 24px; }
-  .foot2 { background: var(--navy); color: #b9b0e6; text-align: center; font-size: .85rem; padding: 0 16px 34px; }
-  .foot2 a { color: #e7e2ff; }
+  /* light → purple at the end */
+  .end-zone { margin-top: 70px; padding: 90px 0 30px; text-align: center; background: linear-gradient(180deg, var(--cream) 0%, #b49ad8 18%, #3a2470 45%, #0b0716 100%); }
+  .end-zone h2 { font-size: clamp(1.9rem, 4.5vw, 3rem); }
+  .end-zone h2 em { font-style: normal; background: var(--magic); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .end-zone p { color: var(--text-2); margin: 10px 0 24px; }
+  .end-zone .foot { margin-top: 56px; font-size: .82rem; color: var(--muted); }
+  .end-zone .foot a { color: var(--text-2); }
 </style>
 </head>
 <body class="home">
-
-<header class="topbar">
-  <div class="wrapx">
-    <div class="bar">
-      <a class="logo" href="index.html"><img src="logo-mark.png" alt=""><span id="brand"></span></a>
-      <nav>
-        <a href="explore.html">Explore</a>
-        <a href="#how">How it works</a>
-        <a href="#pricing">Pricing</a>
-        <a href="dashboard.html" id="nav-mine" hidden>My page</a>
-      </nav>
-      <a class="cta" href="create.html" id="top-cta">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2.5c.4 3.8 1.7 5.1 5.5 5.5-3.8.4-5.1 1.7-5.5 5.5-.4-3.8-1.7-5.1-5.5-5.5 3.8-.4 5.1-1.7 5.5-5.5zM18 12c.3 2.3 1 3 3.3 3.3-2.3.3-3 1-3.3 3.3-.3-2.3-1-3-3.3-3.3 2.3-.3 3-1 3.3-3.3z"/></svg>
-        <span id="top-cta-t">Start creating</span>
-      </a>
-    </div>
-  </div>
-</header>
-
-<section class="hero2">
-  <div class="wrapx grid2">
-    <div>
-      <div class="kicker">Print it. Scan it. See the magic.</div>
-      <h1>Make your photos come <em>alive.</em></h1>
-      <p class="sub">Add videos, GIFs and magic to any photo. Anyone who points their phone at it sees it come to life. No app needed.</p>
-      <div class="btns">
-        <a class="cta" href="create.html">Create your first Pixi
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2.5c.4 3.8 1.7 5.1 5.5 5.5-3.8.4-5.1 1.7-5.5 5.5-.4-3.8-1.7-5.1-5.5-5.5 3.8-.4 5.1-1.7 5.5-5.5zM18 12c.3 2.3 1 3 3.3 3.3-2.3.3-3 1-3.3 3.3-.3-2.3-1-3-3.3-3.3 2.3-.3 3-1 3.3-3.3z"/></svg>
-        </a>
-        <a class="ghost-l" href="explore.html">Explore creations</a>
-      </div>
-      <div class="trust">
-        <span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>No app needed</span>
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>Works on any phone</span>
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10.5" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>Your first one is free</span>
-      </div>
-    </div>
-
-    <div class="visual" aria-hidden="true">
-      <svg class="deco" style="left:2%;top:0;width:34px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1c.6 5.6 2.4 7.4 8 8-5.6.6-7.4 2.4-8 8-.6-5.6-2.4-7.4-8-8 5.6-.6 7.4-2.4 8-8z"/></svg>
-      <svg class="deco" style="right:44%;bottom:8px;width:22px;color:#ff9ce6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1c.6 5.6 2.4 7.4 8 8-5.6.6-7.4 2.4-8 8-.6-5.6-2.4-7.4-8-8 5.6-.6 7.4-2.4 8-8z"/></svg>
-      <div class="print"><img src="demo-photo.jpg" alt=""></div>
-      <svg class="arrow" viewBox="0 0 80 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 30Q30 4 70 14M60 6l10 8-12 6"/></svg>
-      <div class="phone">
-        <div class="screen">
-          <img class="bgp" src="demo-photo.jpg" alt="">
-          <video src="demo.mp4" poster="demo-poster.jpg" autoplay muted loop playsinline></video>
-          <div class="scan"></div>
+<main>
+  <section class="hero-zone">
+    <div class="wrapx hero-grid">
+      <div class="hero-txt">
+        <div class="logo-wrap">
+          <img class="hero-logo float" src="logo.png" alt="Pixi Wizard">
+          <span class="sparkle" style="top:8%;left:-4%;font-size:1.4rem">✦</span>
+          <span class="sparkle" style="top:30%;right:-6%;font-size:1rem;animation-delay:.8s;color:var(--pink)">✦</span>
         </div>
-        <div class="notch"></div>
+        <span class="pill">✨ No app needed · Works in your phone’s camera</span>
+        <h1>Create your own AR experience.<br><em>Just point your phone.</em></h1>
+        <p class="lead">Upload a photo, then add a video, an animated GIF or another photo to go on top. Anyone who scans it with their phone camera sees it come to life, like magic.</p>
+        <div class="hero-btns">
+          <a class="btn btn-primary btn-lg" href="create.html">🪄 Make your first one</a>
+          <a class="btn btn-lg btn-ghost" href="explore.html">Explore creations</a>
+        </div>
+        <div class="trust">
+          <span><i data-pwi="bolt"></i>No app needed</span>
+          <span>📱 Works on any phone</span>
+          <span>🎉 Your first one is free</span>
+        </div>
       </div>
-      <div class="badge-lime">AR MAGIC<br>ON</div>
-      <div class="scanme"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="8" y="8" width="3" height="3" fill="currentColor"/><rect x="13" y="8" width="3" height="3" fill="currentColor"/><rect x="8" y="13" width="3" height="3" fill="currentColor"/><rect x="13" y="13" width="3" height="3" fill="currentColor"/></svg>SCAN ME</div></div>
-    </div>
-  </div>
-</section>
-
-<section class="steps2" id="how">
-  <div class="wrapx">
-    <div class="row3">
-      <div class="st"><div class="n">1</div><div><h3>Upload a photo</h3><p>Any printed photo, poster, artwork, card and more.</p></div>
-        <svg class="ill" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="10" width="34" height="40" rx="3" fill="#fff" stroke="#1c1446" stroke-width="2.5" transform="rotate(-8 25 30)"/><rect x="13" y="15" width="24" height="22" rx="2" fill="#ffb36b" transform="rotate(-8 25 30)"/><circle cx="46" cy="42" r="13" fill="#ff5fd2"/><path d="M46 48V37m-5 5 5-5 5 5" stroke="#fff" stroke-width="3"/></svg></div>
-      <div class="st"><div class="n">2</div><div><h3>Add the magic</h3><p>Overlay a video, GIF or photo. Add pop-out effects.</p></div>
-        <svg class="ill" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="16" width="44" height="30" rx="4" fill="#2f2378"/><path d="M24 24v14l12-7z" fill="#fff"/><path d="M50 8c.5 4.5 1.9 5.9 6.4 6.4-4.5.5-5.9 1.9-6.4 6.4-.5-4.5-1.9-5.9-6.4-6.4 4.5-.5 5.9-1.9 6.4-6.4z" fill="#ffc24b"/><path d="M53 40c4-4 9 1 4 6l-5 4-5-4c-5-5 1-10 4-6z" fill="none" stroke="#ff5fd2" stroke-width="2.5"/></svg></div>
-      <div class="st"><div class="n">3</div><div><h3>Scan &amp; share</h3><p>Anyone can bring it to life with their phone camera. No app needed.</p></div>
-        <svg class="ill" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="6" width="26" height="50" rx="6" fill="#2f2378" transform="rotate(10 33 31)"/><rect x="24" y="13" width="18" height="30" rx="2" fill="#ffb36b" transform="rotate(10 33 31)"/><path d="M8 18l6 3M6 30h7M9 42l6-3" stroke="#ffc24b" stroke-width="3"/></svg></div>
-    </div>
-  </div>
-</section>
-
-<section class="sec">
-  <div class="wrapx">
-    <div class="sec-head">
-      <div><div class="eyebrow">Get inspired</div><h2>See what people are creating</h2></div>
-      <a class="ghost-d" href="explore.html">Explore all creations →</a>
-    </div>
-    <div class="examples" id="examples"><div class="ex-empty">Loading creations…</div></div>
-  </div>
-</section>
-
-<section class="sec">
-  <div class="wrapx">
-    <div class="sec-head"><div><div class="eyebrow">Ideas</div><h2>Bring anything to life</h2></div></div>
-    <div class="ideas">
-      <div class="idea"><div class="ic" style="background:#ffe1ec"><svg viewBox="0 0 24 24" fill="none" stroke="#e8457c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 13h18M12 8S10 3 7.5 4.5 9 8 12 8zm0 0s2-5 4.5-3.5S15 8 12 8z"/></svg></div><b>Birthday cards</b><span>A video message inside</span></div>
-      <div class="idea"><div class="ic" style="background:#efe4ff"><svg viewBox="0 0 24 24" fill="none" stroke="#7c4dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div><b>Weddings</b><span>Photos that replay the day</span></div>
-      <div class="idea"><div class="ic" style="background:#fff0d6"><svg viewBox="0 0 24 24" fill="none" stroke="#e08a00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16l-1.5 9h-13z"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div><b>Businesses</b><span>Menus, flyers, cards</span></div>
-      <div class="idea"><div class="ic" style="background:#e3f7d4"><svg viewBox="0 0 24 24" fill="none" stroke="#3b9b2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.5-.9 1-1.8-.5-1 .2-2 1.3-2H16a5 5 0 0 0 5-5c0-5-4-9.2-9-9.2z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/></svg></div><b>Art &amp; murals</b><span>Show the story behind it</span></div>
-      <div class="idea"><div class="ic" style="background:#dff1ff"><svg viewBox="0 0 24 24" fill="none" stroke="#1d7fd1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></div><b>Music</b><span>Album covers that play</span></div>
-      <div class="idea"><div class="ic" style="background:#fde3ff"><svg viewBox="0 0 24 24" fill="none" stroke="#c53ad0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg></div><b>Scavenger hunts</b><span>Pin it, blur it, go find it</span></div>
-    </div>
-  </div>
-</section>
-
-<section class="sec" id="pricing">
-  <div class="wrapx">
-    <div class="sec-head"><div><div class="eyebrow">Pricing</div><h2>Your first one is on us</h2></div></div>
-    <div class="plans2">
-      <div class="plan2">
-        <h3>Free</h3>
-        <div class="price">$0</div>
-        <ul><li>1 AR experience</li><li>Your own profile page</li><li>Share link + QR code</li><li>Stays live forever</li></ul>
-        <a class="ghost-d" href="create.html">Start free</a>
-      </div>
-      <div class="plan2 pro">
-        <span class="tagp">Most popular</span>
-        <h3>Pro</h3>
-        <div class="price"><span id="pro-price"></span> <small>/ <span id="pro-period"></span></small></div>
-        <ul><li>30 new AR experiences every month</li><li>Like, comment &amp; message creators</li><li>Pop-out effects, locations &amp; blur</li><li>Cancel anytime, your uploads stay up</li></ul>
-        <a class="cta" href="dashboard.html?upgrade=1">Go Pro</a>
+      <div class="visual" aria-hidden="true">
+        <span class="sparkle" style="left:0;top:4px;font-size:1.6rem">✦</span>
+        <span class="sparkle" style="left:46%;bottom:0;font-size:1.1rem;color:var(--pink);animation-delay:1s">✦</span>
+        <div class="print"><img src="demo-photo.jpg" alt=""></div>
+        <div class="phone">
+          <div class="screen">
+            <img class="bgp" src="demo-photo.jpg" alt="">
+            <video poster="demo-poster.jpg" autoplay muted loop playsinline preload="auto"><source src="demo.mp4" type="video/mp4"><source src="demo.webm" type="video/webm"></video>
+            <div class="scan"></div>
+          </div>
+          <div class="notch"></div>
+        </div>
+        <div class="tag-magic">AR MAGIC<br>ON ✨</div>
+        <div class="scanme"><div><i data-pwi="qr"></i>SCAN ME</div></div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="sec">
-  <div class="wrapx">
-    <div class="sec-head"><div><div class="eyebrow">Questions</div><h2>Good to know</h2></div></div>
-    <div class="faq">
-      <details><summary>Do people need to download an app?</summary><p>No. They open your link or scan your QR code, tap "Start AR camera", and point their phone at the photo. It works right in the phone's browser.</p></details>
-      <details><summary>What can I put on top of my photo?</summary><p>A video (MP4 or WebM), an animated GIF, or another photo. Videos up to 20 MB, and if yours is bigger, we'll help you trim it.</p></details>
-      <details><summary>What kind of photos work best?</summary><p>Photos with lots of detail and contrast are easiest for the camera to recognize, like posters, artwork and busy pictures. Plain logos or mostly blank images are harder.</p></details>
-      <details><summary>What happens if I cancel Pro?</summary><p>Everything you've made stays live on your page. You just can't make new ones until you resubscribe.</p></details>
+  <div class="light">
+    <section class="steps3" id="how">
+      <div class="wrapx">
+        <div class="row3">
+          <div class="st"><div class="n">1</div><div><h3>Upload a photo</h3><p>Any printed photo, poster, artwork, card and more.</p></div><span class="ill">🖼</span></div>
+          <div class="st"><div class="n">2</div><div><h3>Add the magic</h3><p>Overlay a video, GIF or photo. Add pop-out effects.</p></div><span class="ill">🪄</span></div>
+          <div class="st"><div class="n">3</div><div><h3>Scan &amp; share</h3><p>Anyone can bring it to life with their phone camera. No app needed.</p></div><span class="ill">📱</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="wrapx">
+        <div class="sec-head">
+          <div><div class="eyebrow">Get inspired</div><h2>See what people are <span class="magic-text">creating</span></h2></div>
+          <a class="btn-ink" href="explore.html">Explore all creations →</a>
+        </div>
+        <div class="examples" id="examples"><div class="ex-empty">Loading creations…</div></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="wrapx">
+        <div class="sec-head"><div><div class="eyebrow">Ideas</div><h2>Bring anything to <span class="magic-text">life</span></h2></div></div>
+        <div class="ideas">
+          <div class="idea"><div class="ic"><i data-pwi="gift"></i></div><b>Birthday cards</b><span>A video message inside</span></div>
+          <div class="idea"><div class="ic">♥</div><b>Weddings</b><span>Photos that replay the day</span></div>
+          <div class="idea"><div class="ic"><i data-pwi="shop"></i></div><b>Businesses</b><span>Menus, flyers, cards</span></div>
+          <div class="idea"><div class="ic">🎨</div><b>Art &amp; murals</b><span>Show the story behind it</span></div>
+          <div class="idea"><div class="ic"><i data-pwi="music"></i></div><b>Music</b><span>Album covers that play</span></div>
+          <div class="idea"><div class="ic">📍</div><b>Scavenger hunts</b><span>Pin it, blur it, go find it</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="pricing">
+      <div class="wrapx">
+        <div class="sec-head"><div><div class="eyebrow">Pricing</div><h2>Your first one is <span class="magic-text">on us</span></h2></div></div>
+        <div class="plans3">
+          <div class="pl">
+            <h3>Free</h3>
+            <div class="price">$0</div>
+            <ul><li>1 AR experience</li><li>Your own profile page</li><li>Share link + QR code</li><li>Stays live forever</li></ul>
+            <a class="btn-ink" style="justify-content:center;margin-top:auto" href="create.html">Start free</a>
+          </div>
+          <div class="pl pro">
+            <span class="pill pro tagp">Most popular</span>
+            <h3>Pro</h3>
+            <div class="price"><span id="pro-price"></span> <small>/ <span id="pro-period"></span></small></div>
+            <ul><li>30 new AR experiences every month</li><li>Like, comment &amp; message creators</li><li>Pop-out effects, locations &amp; blur</li><li>Cancel anytime, your uploads stay up</li></ul>
+            <a class="btn btn-primary btn-block" href="dashboard.html?upgrade=1">Go Pro</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="wrapx">
+        <div class="sec-head"><div><div class="eyebrow">Questions</div><h2>Good to know</h2></div></div>
+        <div class="faq">
+          <details><summary>Do people need to download an app?</summary><p>No. They open your link or scan your QR code, tap "Start AR camera", and point their phone at the photo. It works right in the phone's browser.</p></details>
+          <details><summary>What can I put on top of my photo?</summary><p>A video (MP4 or WebM), an animated GIF, or another photo. Videos up to 20 MB, and if yours is bigger, we'll help you trim it.</p></details>
+          <details><summary>What kind of photos work best?</summary><p>Photos with lots of detail and contrast are easiest for the camera to recognize, like posters, artwork and busy pictures. Plain logos or mostly blank images are harder.</p></details>
+          <details><summary>What happens if I cancel Pro?</summary><p>Everything you've made stays live on your page. You just can't make new ones until you resubscribe.</p></details>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="end-zone">
+    <div class="wrapx">
+      <h2>Ready to make some <em>magic?</em></h2>
+      <p>Takes about a minute. Your first one is free.</p>
+      <a class="btn btn-primary btn-lg" href="create.html">🪄 Make your first one</a>
+      <div class="foot"><span id="foot-name"></span> · Content is user-generated. · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></div>
     </div>
-  </div>
-</section>
-
-<section class="band">
-  <div class="wrapx">
-    <h2>Ready to make something <em>magic?</em></h2>
-    <p>Takes about a minute. Your first one is free.</p>
-    <a class="cta" href="create.html" style="padding:15px 28px;font-size:1.05rem">Create your first Pixi</a>
-  </div>
-</section>
-<footer class="foot2"><span id="foot-name"></span> · Content is user-generated. · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></footer>
+  </section>
+</main>
 
 <script>
 (async function () {
+  App.mountHeader();
   const C = App.C, esc = App.esc, $ = (id) => document.getElementById(id);
-  document.title = document.title.replace("{site}", C.SITE_NAME);
-  $("brand").textContent = C.SITE_NAME;
   $("pro-price").textContent = C.PRO_PRICE_LABEL;
   $("pro-period").textContent = C.PRO_PRICE_PERIOD;
   $("foot-name").textContent = "© " + new Date().getFullYear() + " " + C.SITE_NAME;
-
-  // signed in? swap the top button for "My page"
-  App.getSession().then((s) => {
-    if (!s) return;
-    $("nav-mine").hidden = false;
-    $("top-cta").href = "create.html";
-    $("top-cta-t").textContent = "Create";
-  }).catch(() => {});
 
   // real creations from Explore
   try {
@@ -324,7 +284,7 @@
           return '<a class="ex" href="' + esc(App.arLink(x.slug)) + '">' +
             '<img loading="lazy" alt=""' + (x.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(x.image_path)) + '">' +
             '<span class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg></span>' +
-            '<span class="cap"><b>' + esc(x.title) + "</b>" + (who ? "<span>" + esc(who) + "</span>" : "") + "</span></a>";
+            '<span class="cap"><b data-noicon>' + esc(x.title) + "</b>" + (who ? "<span data-noicon>" + esc(who) + "</span>" : "") + "</span></a>";
         }).join("")
       : '<div class="ex-empty">Be one of the first creators! <a href="create.html">Make yours →</a></div>';
   } catch (e) {
