@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261025-3">
+<link rel="stylesheet" href="styles.css?v=20261025-5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261025-3"></script>
-<script src="app.js?v=20261025-3"></script>
-<script src="icons.js?v=20261025-3" defer></script>
+<script src="config.js?v=20261025-5"></script>
+<script src="app.js?v=20261025-5"></script>
+<script src="icons.js?v=20261025-5" defer></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -63,7 +63,7 @@
       <div class="drop" id="drop-img">
         <input type="file" id="file-img" accept="image/jpeg,image/png,image/webp">
         <div class="empty-state">
-          <div class="icon">🖼️</div>
+          <div class="icon"><img class="drop-art" src="icon-image.png" alt=""></div>
           <div>Drop image here or <span class="browse">browse</span></div>
           <div class="hint">JPG · PNG · WebP</div>
         </div>
@@ -79,7 +79,7 @@
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp">
         <div class="empty-state">
-          <div class="icon">🎬</div>
+          <div class="icon"><img class="drop-art" src="icon-video.png" alt=""></div>
           <div>Drop a video, GIF or photo here or <span class="browse">browse</span></div>
           <div class="hint">MP4 · WebM · GIF · JPG · PNG — videos and GIFs under <span class="js-maxvid"></span> MB. Bigger video? We'll help you trim it.</div>
         </div>
