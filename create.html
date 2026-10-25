@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261024-7">
+<link rel="stylesheet" href="styles.css?v=20261024-8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261024-7"></script>
-<script src="app.js?v=20261024-7"></script>
+<script src="config.js?v=20261024-8"></script>
+<script src="app.js?v=20261024-8"></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -23,6 +23,10 @@
   .trim .est { margin: 10px 0 14px; font-size: .9rem; }
   .trim .est.bad { color: #ff8a8a; }
   .trim .row { gap: 10px; flex-wrap: wrap; }
+  .priv-box { margin: 4px 0 16px; }
+  .priv-box summary .small { margin-left: 6px; font-weight: 400; }
+  .priv-inner { margin-top: 12px; display: grid; gap: 12px; }
+  .priv-inner .private-toggle { margin: 0; }
 </style>
 </head>
 <body>
@@ -108,6 +112,9 @@
           <span>Your page</span>
           <div class="input" id="handle-box" style="display:flex;align-items:center;gap:8px;overflow-wrap:anywhere;color:var(--text-2)">🔒 <span id="handle-preview"></span></div>
         </div>
+        <details class="fx-box priv-box" id="priv-box">
+          <summary>🔒 Privacy &amp; location <span class="small muted" id="priv-sum">Public</span></summary>
+          <div class="priv-inner">
         <label class="private-toggle">
           <input type="checkbox" id="is-private">
           <span class="switch" aria-hidden="true"></span>
@@ -122,6 +129,8 @@
           <span class="switch" aria-hidden="true"></span>
           <span><b>🙈 Blur the photo</b><br><span class="small muted">Your photo shows blurred on the site, so people can't scan it off a screen. They have to find the real one.</span></span>
         </label>
+          </div>
+        </details>
         <button class="btn btn-primary btn-lg btn-block" id="publish">Create</button>
         <div id="progress-wrap" hidden>
           <div class="progress"><div id="bar"></div></div>
@@ -433,6 +442,15 @@
   // pop-out effects
   const fx = App.mountEffects($("fx"), {});
 
+  // one-line summary on the closed "Privacy & location" box
+  function privSummary() {
+    const bits = [$("is-private").checked ? "Private" : "Public"];
+    if (loc) bits.push("📍 " + (loc.place_name || "location set"));
+    if ($("photo-hidden").checked) bits.push("blurred");
+    $("priv-sum").textContent = bits.join(" · ");
+  }
+  ["is-private", "photo-hidden"].forEach((id) => $(id).addEventListener("change", privSummary));
+
   // optional location
   let loc = null;
   $("loc-btn").onclick = async () => {
@@ -440,6 +458,7 @@
     if (r === undefined) return;
     loc = r;
     $("loc-label").textContent = loc ? (loc.place_name || "Location added") + (loc.loc_approx ? " (approx.)" : "") + " · change" : "Add a location (optional)";
+    privSummary();
   };
 
   $("title").addEventListener("input", refresh);
