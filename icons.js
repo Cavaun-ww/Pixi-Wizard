@@ -48,34 +48,8 @@
     list.forEach(fix);
   }
 
-  // ── follow us: TikTok + Instagram at the bottom of every page ──
-  var SOCIAL = [
-    { name: "TikTok", url: "https://www.tiktok.com/@pixiwizard",
-      svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.6 3c.4 2.3 1.9 3.9 4.2 4.1v3.1c-1.5.1-2.9-.4-4.1-1.2v6.3c0 3.6-2.6 6.2-6.1 6.2S4.5 18.9 4.5 15.4c0-3.6 2.9-6.3 6.6-6v3.2c-1.8-.3-3.4.9-3.4 2.8 0 1.6 1.2 2.9 2.9 2.9 1.8 0 3-1.3 3-3.3V3h3z"/></svg>' },
-    { name: "Instagram", url: "https://www.instagram.com/pixiwizard",
-      svg: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5.2"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.2" fill="currentColor" stroke="none"/></svg>' },
-  ];
-  function addSocial() {
-    if (document.querySelector(".pw-social") || /messages\.html/.test(location.pathname)) return;
-    var row = document.createElement("div");
-    row.className = "pw-social";
-    row.innerHTML = '<span class="pw-follow">Follow Pixi Wizard</span>' + SOCIAL.map(function (s) {
-      return '<a href="' + s.url + '" target="_blank" rel="noopener" aria-label="' + s.name + '" title="' + s.name + '">' + s.svg + "</a>";
-    }).join("");
-    var foot = document.querySelector(".footer, .foot");
-    if (foot) foot.appendChild(row);
-    else { var f = document.createElement("footer"); f.className = "footer"; f.appendChild(row); document.body.appendChild(f); }
-    var st = document.createElement("style");
-    st.textContent = ".pw-social{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}" +
-      ".pw-follow{width:100%;font-size:.78rem;color:var(--muted,#8a7bab);margin-bottom:2px}" +
-      ".pw-social a{display:inline-grid;place-items:center;width:42px;height:42px;padding:0;border-radius:50%;border:1px solid var(--line,#2a2048);background:rgba(255,255,255,.03);color:var(--text,#f6f0ff);text-decoration:none;font-size:.85rem;transition:border-color .2s,background .2s}" +
-      ".pw-social a:hover{border-color:#ff5fd2;background:rgba(255,95,210,.08)}" +
-      ".pw-social svg{width:20px;height:20px}";
-    document.head.appendChild(st);
-  }
   function start() {
     addDefs();
-    addSocial();
     fix(document.body);
     new MutationObserver(function (muts) {
       muts.forEach(function (m) {
