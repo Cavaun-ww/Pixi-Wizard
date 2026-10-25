@@ -199,12 +199,19 @@
   }
 
   // header with brand + nav that reflects signed-in state
+  // "Pixi" gets diamond dots on its i's, like the big logo
+  function brandName(n) {
+    const parts = esc(n).split(" ");
+    parts[0] = parts[0].replace(/i/g, '<span class="dia-i">\u0131</span>');
+    return parts.join(" ");
+  }
+
   async function mountHeader() {
     document.title = document.title.replace("{site}", C.SITE_NAME);
     const h = document.createElement("header");
     h.className = "site-header";
     h.innerHTML =
-      '<a class="brand" href="index.html"><img class="brand-mark" src="logo-mark.png" alt=""><span class="brand-name">' + esc(C.SITE_NAME) + "</span></a>" +
+      '<a class="brand" href="index.html"><img class="brand-mark" src="logo-mark.png" alt=""><span class="brand-name">' + brandName(C.SITE_NAME) + "</span></a>" +
       '<nav class="nav" id="nav"></nav>';
     document.body.prepend(h);
     if (!configured) {
@@ -546,7 +553,7 @@
 
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
-    timeAgo, mountEffects, effectsSummary, loadLeaflet, makeMap, pinIcon, pickLocation, hereNow, milesBetween, distLabel, directionsUrl, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
+    brandName, timeAgo, mountEffects, effectsSummary, loadLeaflet, makeMap, pinIcon, pickLocation, hereNow, milesBetween, distLabel, directionsUrl, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
     renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme, applyBackground, BG_COLORS,
   };
 })();
