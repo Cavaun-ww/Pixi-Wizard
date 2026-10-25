@@ -503,8 +503,8 @@
           LIFTS.map((l, i) => '<button type="button" data-i="' + i + '"' + (i === liftIdx ? ' class="on"' : "") + ">" + l[0] + "</button>").join("") + "</div></div>" +
         '<div class="fx-hint">Floats it toward the viewer so it looks 3D as they move.</div>' +
         '<div class="fx-row"><span>Remove background</span><div class="fx-seg" id="fx-key">' +
-          [["none", "Off"], ["green", "🟩 Green"], ["black", "⬛ Black"]].map((k) => '<button type="button" data-k="' + k[0] + '"' + ((init.key_mode || "none") === k[0] ? ' class="on"' : "") + ">" + k[1] + "</button>").join("") + "</div></div>" +
-        '<div class="fx-hint">Film or export your animation on a solid green or black background and it disappears in AR, so only your animation floats.</div>' +
+          [["none", "Off"], ["green", "🟩 Green"], ["black", "⬛ Black"], ["white", "⬜ White"]].map((k) => '<button type="button" data-k="' + k[0] + '"' + ((init.key_mode || "none") === k[0] ? ' class="on"' : "") + ">" + k[1] + "</button>").join("") + "</div></div>" +
+        '<div class="fx-hint">Film or export your animation on a solid green, black or white background and it disappears in AR, so only your animation floats. Heads up: with White, white parts of your art turn see-through too.</div>' +
       "</div>";
     const q = (s) => el.querySelector(s);
     q("#fx-pop").oninput = () => (q("#fx-pop-v").textContent = q("#fx-pop").value + "%");
@@ -524,7 +524,7 @@
     if ((+x.pop_scale || 1) > 1) bits.push(Math.round(x.pop_scale * 100) + "%");
     const l = LIFTS.find((l) => Math.abs(l[1] - (+x.lift || 0)) < 0.02);
     if (l && l[1]) bits.push("lift " + l[0].toLowerCase());
-    if (x.key_mode === "green") bits.push("green removed"); else if (x.key_mode === "black") bits.push("black removed");
+    if (x.key_mode === "green" || x.key_mode === "black" || x.key_mode === "white") bits.push(x.key_mode + " removed");
     return bits.join(" · ");
   }
 

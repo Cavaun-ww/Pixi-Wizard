@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261024-6"></script>
+<script src="config.js?v=20261024-7"></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -363,6 +363,10 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
         "  diffuseColor.a *= 1.0 - smoothstep(0.06, 0.22, gd);" +
         "  if (gd > 0.0) diffuseColor.g = m + gd * 0.25;" +       // remove green spill around edges
         "  if (diffuseColor.a < 0.02) discard; }"
+      : mode === "white"
+      ? "{ float w = min(min(diffuseColor.r, diffuseColor.g), diffuseColor.b);" +
+        "  diffuseColor.a *= 1.0 - smoothstep(0.78, 0.93, w);" +
+        "  if (diffuseColor.a < 0.02) discard; }"
       : "{ float l = max(max(diffuseColor.r, diffuseColor.g), diffuseColor.b);" +
         "  diffuseColor.a *= smoothstep(0.05, 0.18, l);" +
         "  if (diffuseColor.a < 0.02) discard; }";
@@ -499,7 +503,7 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
         var pop = Math.min(2, Math.max(1, +xp.pop_scale || 1)), lift = Math.min(0.6, Math.max(0, +xp.lift || 0));
         var geo = new THREE.PlaneGeometry(pw * pop, ph * pop);
         var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0, depthWrite: false });
-        if (xp.key_mode === "green" || xp.key_mode === "black") applyKey(mat, xp.key_mode);
+        if (xp.key_mode === "green" || xp.key_mode === "black" || xp.key_mode === "white") applyKey(mat, xp.key_mode);
         if (lift) this.el.object3D.position.z = 0.01 + lift;
         this.lift = lift;
         this.el.setObject3D("vid", new THREE.Mesh(geo, mat));
