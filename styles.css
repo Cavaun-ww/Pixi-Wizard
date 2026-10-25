@@ -333,3 +333,4 @@ details.fx-box summary::-webkit-details-marker { display: none; }
 details.fx-box summary::after { content: "▾"; float: right; color: var(--muted); }
 details.fx-box[open] summary::after { content: "▴"; }
 .drop .icon .drop-art { width: 56px; height: 56px; object-fit: contain; display: block; margin: 0 auto 6px; filter: drop-shadow(0 8px 18px rgba(168,85,247,.35)); }
+.drop .icon .drop-art[src*="icon-video"] { width: 42px; height: 42px; margin-top: 6px; margin-bottom: 14px; }
