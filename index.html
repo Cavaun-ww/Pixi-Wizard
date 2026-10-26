@@ -55,6 +55,7 @@
   .phone .scan { position: absolute; left: 12%; right: 12%; top: 20%; height: 2px; background: #ff5fd2; box-shadow: 0 0 12px #ff5fd2; animation: scan 3.6s linear infinite; }
   @keyframes scan { 0% { top: 20% } 25% { top: 62%; opacity: 1 } 26%,100% { opacity: 0 } }
   .tag-magic { position: absolute; right: -1%; top: 22px; background: var(--magic); color: #1a0630; font-family: var(--fun); font-weight: 600; padding: 9px 15px; border-radius: 16px; transform: rotate(10deg); box-shadow: 0 10px 24px -10px rgba(255,95,210,.8); text-align: center; line-height: 1.05; }
+  .tag-magic .tm-sp { position: absolute; top: -10px; right: -10px; font-size: 1.15rem; }
   .scanme { position: absolute; left: 42%; bottom: 36px; width: 90px; height: 90px; border-radius: 50%; background: #1d1538; border: 2px solid #ff5fd2; color: #fff; display: grid; place-items: center; font-family: var(--fun); font-weight: 600; font-size: .78rem; transform: rotate(-12deg); box-shadow: 0 10px 25px -10px rgba(0,0,0,.6); text-align: center; line-height: 1.1; }
   .scanme i { display: block; font-size: 1.9rem; margin-bottom: 2px; }
   .visual .sparkle { position: absolute; }
@@ -178,7 +179,7 @@
           </div>
           <div class="notch"></div>
         </div>
-        <div class="tag-magic">EASY<br>TO USE ✨</div>
+        <div class="tag-magic">EASY<br>TO USE<span class="tm-sp">✨</span></div>
         <div class="scanme"><div><i data-pwi="qr"></i>SCAN ME</div></div>
       </div>
     </div>
