@@ -30,9 +30,9 @@ a-scene { position:fixed!important; top:0!important; left:0!important; width:100
   position:fixed; inset:0; z-index:1000;
   background:#0b0716; background-image:radial-gradient(800px 480px at 20% -120px,rgba(168,85,247,.32) 0%,transparent 70%),radial-gradient(600px 400px at 100% 0,rgba(255,95,210,.18) 0%,transparent 70%); background-repeat:no-repeat;
   display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
-  padding:24px 20px; overflow-y:auto; text-align:center;
+  padding:24px 20px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:none; text-align:center;
 }
-.inner { margin:auto 0; width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; }
+.inner { margin:auto 0; width:100%; max-width:360px; min-width:0; display:flex; flex-direction:column; align-items:center; }
 .brand { display:flex; align-items:center; gap:8px; margin-bottom:16px; text-decoration:none; }
 .brand img { width:38px; filter:drop-shadow(0 0 10px rgba(168,85,247,.55)); }
 .brand span { font-family:"Fredoka",sans-serif; font-weight:600; font-size:1.15rem; background:var(--magic); -webkit-background-clip:text; background-clip:text; color:transparent; }
@@ -99,7 +99,7 @@ body.desktop #target-img { max-height:26vh; }
 .pill-float.show { display:block; }
 
 /* likes + comments */
-.social { margin-top:22px; text-align:left; }
+.social { width:100%; box-sizing:border-box; margin-top:22px; text-align:left; }
 .soc-bar { display:flex; gap:10px; justify-content:center; margin-bottom:18px; }
 .soc-bar button, .soc-bar a { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:999px; border:1px solid #3d2f66; background:#1d1538; color:var(--text); font:inherit; font-size:.95rem; cursor:pointer; text-decoration:none; }
 .soc-bar button:hover, .soc-bar a:hover { border-color:var(--accent); }
@@ -140,8 +140,8 @@ body.desktop #target-img { max-height:26vh; }
 #soft-note.show { opacity:1; transform:translate(-50%, 0); }
 .where-chip { display:inline-flex; align-items:center; gap:4px; margin-top:10px; padding:6px 14px; border-radius:999px; border:1px solid #3d2f66; background:#1d1538; color:var(--text); font-size:.88rem; text-decoration:none; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .where-chip[hidden] { display:none; }
-.where { margin-top:20px; scroll-margin-top:20px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:#140d26; text-align:left; }
-.where-map { height:160px; background:#1a1430; }
+.where { width:100%; box-sizing:border-box; margin-top:20px; scroll-margin-top:20px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:#140d26; text-align:left; }
+.where-map { height:160px; background:#1a1430; pointer-events:none; touch-action:pan-y; }
 .where-row { display:flex; align-items:center; gap:12px; padding:12px 14px; }
 .where-name { flex:1; min-width:0; display:flex; flex-direction:column; }
 .where-name b { font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -564,7 +564,7 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
     var css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"; document.head.appendChild(css);
     var js = document.createElement("script"); js.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
     js.onload = function () {
-      var L = window.L, map = L.map("where-map", { zoomControl: false, dragging: !isMobile, scrollWheelZoom: false, tap: false }).setView([xp.lat, xp.lng], xp.loc_approx ? 14 : 16);
+      var L = window.L, map = L.map("where-map", { zoomControl: false, dragging: false, touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, scrollWheelZoom: false, tap: false }).setView([xp.lat, xp.lng], xp.loc_approx ? 14 : 16);
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
       if (xp.loc_approx) L.circle([xp.lat, xp.lng], { radius: 700, color: "#ff5fd2", weight: 2, fillColor: "#a855f7", fillOpacity: .18 }).addTo(map);
       else L.marker([xp.lat, xp.lng], { icon: L.divIcon({ className: "pw-pin", html: "📍", iconSize: [34, 34], iconAnchor: [17, 32] }) }).addTo(map);
