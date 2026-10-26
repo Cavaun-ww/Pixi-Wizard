@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261025-13">
+<link rel="stylesheet" href="styles.css?v=20261026-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261025-13"></script>
-<script src="app.js?v=20261025-13"></script>
-<script src="icons.js?v=20261025-13" defer></script>
+<script src="config.js?v=20261026-1"></script>
+<script src="app.js?v=20261026-1"></script>
+<script src="icons.js?v=20261026-1" defer></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -26,7 +26,11 @@
   .trim .row { gap: 10px; flex-wrap: wrap; }
   .priv-box { margin: 4px 0 16px; }
   .priv-box summary .small { margin-left: 6px; font-weight: 400; }
-  .priv-inner { margin-top: 12px; display: grid; gap: 12px; }
+  .priv-inner { margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .priv-inner > * { min-width: 0; }
+  .priv-inner .loc-chip { max-width: 100%; box-sizing: border-box; }
+  .priv-inner .loc-chip span { min-width: 0; }
+  #priv-sum { overflow-wrap: anywhere; }
   .priv-inner .private-toggle { margin: 0; }
 </style>
 </head>
