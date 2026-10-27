@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261026-1">
+<link rel="stylesheet" href="styles.css?v=20261026-2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261026-1"></script>
-<script src="app.js?v=20261026-1"></script>
-<script src="icons.js?v=20261026-1" defer></script>
+<script src="config.js?v=20261026-2"></script>
+<script src="app.js?v=20261026-2"></script>
+<script src="icons.js?v=20261026-2" defer></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -434,6 +434,7 @@
             '<button class="btn btn-sm btn-danger" data-act="del" aria-label="Delete">✕</button>' +
           "</div>" +
           '<details class="fx-box card-more" data-more="' + x.id + '"' + (openMore.has(x.id) ? " open" : "") + '><summary>⚙️ Settings <span class="small muted">' + esc(moreSummary(x)) + '</span></summary><div class="more-inner">' +
+          '<button class="btn btn-sm btn-ghost btn-block" data-act="rename">✏️ Change title</button>' +
           '<button class="btn btn-sm btn-ghost btn-block" data-act="priv">' + (x.is_private ? "🌍 Make public" : "🔒 Make private") + "</button>" +
           '<button class="btn btn-sm btn-ghost btn-block loc-line" data-act="fx">✨ ' + (App.effectsSummary(x) ? "Effects: " + esc(App.effectsSummary(x)) : "Pop-out effects") + "</button>" +
           '<button class="btn btn-sm btn-ghost btn-block loc-line" data-act="blur">' + (x.photo_hidden ? "👁 Show photo clearly" : "🙈 Blur photo (find it in person)") + "</button>" +
@@ -451,6 +452,7 @@
       card.querySelector('[data-act="qr"]').onclick = () => openQR(x);
       card.querySelector('[data-act="del"]').onclick = () => del(x);
       card.querySelector('[data-act="fx"]').onclick = () => openEffects(x);
+      card.querySelector('[data-act="rename"]').onclick = () => openRename(x);
       card.querySelector('[data-act="blur"]').onclick = async (e) => {
         e.currentTarget.disabled = true;
         const { error } = await sb.from("experiences").update({ photo_hidden: !x.photo_hidden }).eq("id", x.id);
@@ -491,6 +493,34 @@
     document.querySelectorAll("#mine-chips button").forEach((x) => x.classList.toggle("on", x === b));
     renderList();
   });
+
+  function openRename(x) {
+    const bg = document.createElement("div");
+    bg.className = "modal-bg show";
+    bg.innerHTML = '<div class="modal"><h2 style="margin-bottom:12px">✏️ Change title</h2>' +
+      '<input class="input" id="rn-title" maxlength="80" style="font-size:16px" autocomplete="off">' +
+      '<div class="small muted" style="margin-top:6px"><span id="rn-count"></span>/80</div>' +
+      '<div class="row" style="gap:8px;margin-top:18px"><button class="btn btn-primary" id="rn-save">Save</button><button class="btn btn-ghost" id="rn-cancel">Cancel</button></div></div>';
+    document.body.appendChild(bg);
+    const inp = bg.querySelector("#rn-title"), cnt = bg.querySelector("#rn-count");
+    inp.value = x.title || ""; cnt.textContent = inp.value.length;
+    inp.oninput = () => (cnt.textContent = inp.value.length);
+    setTimeout(() => { inp.focus(); inp.select(); }, 50);
+    const close = () => bg.remove();
+    bg.querySelector("#rn-cancel").onclick = close;
+    bg.onclick = (e) => { if (e.target === bg) close(); };
+    const save = async () => {
+      const t = inp.value.trim().slice(0, 80);
+      if (!t) return App.toast("Give it a title.", true);
+      if (t === x.title) return close();
+      bg.querySelector("#rn-save").disabled = true;
+      const { error } = await sb.from("experiences").update({ title: t }).eq("id", x.id);
+      if (error) { bg.querySelector("#rn-save").disabled = false; return App.toast("Couldn't save the title. Try again.", true); }
+      close(); App.toast("Title updated"); loadList();
+    };
+    bg.querySelector("#rn-save").onclick = save;
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save(); } });
+  }
 
   function openEffects(x) {
     const bg = document.createElement("div");
