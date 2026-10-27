@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261027-1">
+<link rel="stylesheet" href="styles.css?v=20261027-2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261027-1"></script>
-<script src="app.js?v=20261027-1"></script>
-<script src="icons.js?v=20261027-1" defer></script>
+<script src="config.js?v=20261027-2"></script>
+<script src="app.js?v=20261027-2"></script>
+<script src="icons.js?v=20261027-2" defer></script>
 <style>
   .wrap.chat-wrap { max-width: 640px; padding-bottom: 0; }
   h1.pg { font-size: 1.8rem; margin-bottom: 14px; }
@@ -38,6 +38,9 @@
   .act-line { font-size: .93rem; line-height: 1.35; color: var(--text-2); }
   .act-line b { color: var(--text); font-weight: 500; }
   .convo.act .last { white-space: nowrap; }
+  .chips { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; }
+  .chips button { flex: 0 0 auto; padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: #140d26; color: var(--text-2); font: inherit; font-size: .85rem; cursor: pointer; }
+  .chips button.on { background: var(--magic); border-color: transparent; color: #fff; }
   .new-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--pink); }
   /* chat */
   .chat-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
@@ -110,27 +113,53 @@
             '<div class="side"><span>' + App.timeAgo(c.last_at) + "</span>" + (c.unread ? '<span class="badge">' + c.unread + "</span>" : "") + "</div>" +
           "</a>").join("")
       : '<div class="empty"><img src="logo-mark.png" alt="" class="float" style="width:80px;margin:0 auto"><p style="margin:12px 0 6px">No messages yet.</p><p class="muted small">Find a creator on Explore and tap 💬 Message on their page.</p><a class="btn btn-primary" style="margin-top:14px" href="explore.html">Explore</a></div>';
-    const what = (a) => a.kind === "like" ? "liked your post" : a.kind === "comment" ? "commented on" : "liked your comment on";
-    const actHTML = acts.length
-      ? acts.map((a) => {
-          const who = a.actor_name || "@" + a.actor_handle;
-          const p = { handle: a.actor_handle, display_name: a.actor_name, avatar_path: a.actor_avatar };
-          return '<a class="convo act' + (a.read_at ? "" : " unread") + '" href="' + (a.slug ? "ar.html?x=" + encodeURIComponent(a.slug) : "u.html?h=" + encodeURIComponent(a.actor_handle)) + '">' +
-            '<span class="av-wrap">' + avatar(p).replace(/^<a /, "<span ").replace(/<\/a>$/, "</span>").replace(/ href="[^"]*"/, "") +
-              '<span class="kind-dot">' + (a.kind === "comment" ? "💬" : "♥") + "</span></span>" +
-            '<div class="mid"><div class="act-line"><b data-noicon>' + esc(who) + "</b> " + what(a) + (a.title ? ' <b data-noicon>' + esc(a.title) + "</b>" : "") + "</div>" +
-              (a.snippet ? '<div class="last" data-noicon>"' + esc(a.snippet) + '"</div>' : "") + "</div>" +
-            '<div class="side"><span>' + App.timeAgo(a.created_at) + "</span>" + (a.read_at ? "" : '<span class="new-dot"></span>') + "</div>" +
-          "</a>";
-        }).join("")
-      : '<div class="empty"><p style="margin:12px 0 6px">No activity yet.</p><p class="muted small">When people like or comment on your AR, you\'ll see it here.</p></div>';
+    // group: all likes on the same post become one row ("A, B and 12 others liked your post")
+    const groups = [], likeGroup = {};
+    acts.forEach((a) => {
+      if (a.kind === "like" && a.slug) {
+        const g = likeGroup[a.slug];
+        if (g) { g.people.push(a); if (!a.read_at) g.unread = true; return; }
+        const ng = { kind: "like", people: [a], first: a, unread: !a.read_at };
+        likeGroup[a.slug] = ng; groups.push(ng); return;
+      }
+      groups.push({ kind: a.kind, people: [a], first: a, unread: !a.read_at });
+    });
+    const nameOf = (a) => esc(a.actor_name || "@" + a.actor_handle);
+    const whoLine = (g) => {
+      const ps = g.people, n = ps.length;
+      if (n === 1) return "<b data-noicon>" + nameOf(ps[0]) + "</b>";
+      if (n === 2) return "<b data-noicon>" + nameOf(ps[0]) + "</b> and <b data-noicon>" + nameOf(ps[1]) + "</b>";
+      return "<b data-noicon>" + nameOf(ps[0]) + "</b>, <b data-noicon>" + nameOf(ps[1]) + "</b> and " + (n - 2) + " other" + (n - 2 === 1 ? "" : "s");
+    };
+    const what = (k) => k === "like" ? "liked your post" : k === "comment" ? "commented on" : "liked your comment on";
+    const rowHTML = (g) => {
+      const a = g.first, p = { handle: a.actor_handle, display_name: a.actor_name, avatar_path: a.actor_avatar };
+      return '<a class="convo act' + (g.unread ? " unread" : "") + '" href="' + (a.slug ? "ar.html?x=" + encodeURIComponent(a.slug) : "u.html?h=" + encodeURIComponent(a.actor_handle)) + '">' +
+        '<span class="av-wrap">' + avatar(p).replace(/^<a /, "<span ").replace(/<\/a>$/, "</span>").replace(/ href="[^"]*"/, "") +
+          '<span class="kind-dot">' + (a.kind === "comment" ? "💬" : "♥") + "</span></span>" +
+        '<div class="mid"><div class="act-line">' + whoLine(g) + " " + what(a.kind) + (a.title ? ' <b data-noicon>' + esc(a.title) + "</b>" : "") + "</div>" +
+          (a.snippet ? '<div class="last" data-noicon>"' + esc(a.snippet) + '"</div>' : "") + "</div>" +
+        '<div class="side"><span>' + App.timeAgo(a.created_at) + "</span>" + (g.unread ? '<span class="new-dot"></span>' : "") + "</div>" +
+      "</a>";
+    };
+    let actFilter = "all", actShown = 20;
+    const actHTML = () => {
+      if (!acts.length) return '<div class="empty"><p style="margin:12px 0 6px">No activity yet.</p><p class="muted small">When people like or comment on your AR, you\'ll see it here.</p></div>';
+      const list = groups.filter((g) => actFilter === "all" || (actFilter === "likes" ? g.kind !== "comment" : g.kind === "comment"));
+      return '<div class="chips act-chips"><button data-f="all"' + (actFilter === "all" ? ' class="on"' : "") + ">All</button>" +
+          '<button data-f="likes"' + (actFilter === "likes" ? ' class="on"' : "") + ">♥ Likes</button>" +
+          '<button data-f="comments"' + (actFilter === "comments" ? ' class="on"' : "") + ">💬 Comments</button></div>" +
+        (list.length ? list.slice(0, actShown).map(rowHTML).join("") : '<p class="muted small" style="text-align:center;padding:24px 0">Nothing here yet.</p>') +
+        (list.length > actShown ? '<button class="btn btn-ghost btn-block" id="act-more" style="margin-top:10px">Show more (' + (list.length - actShown) + ")</button>" : "");
+    };
     main.innerHTML = '<h1 class="pg">Messages</h1>' +
       '<div class="tabs2"><button data-t="chats">Chats' + (chatUnread ? ' <span class="badge">' + chatUnread + "</span>" : "") + '</button>' +
       '<button data-t="activity">Activity' + (actUnread ? ' <span class="badge">' + actUnread + "</span>" : "") + "</button></div>" +
       '<div id="pane"></div>';
     const show = (t) => {
       main.querySelectorAll(".tabs2 button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
-      $("pane").innerHTML = t === "activity" ? actHTML : chatsHTML;
+      $("pane").innerHTML = t === "activity" ? actHTML() : chatsHTML;
+      if (t === "activity") wireAct();
       history.replaceState(null, "", t === "activity" ? "messages.html?tab=activity" : "messages.html");
       if (t === "activity" && actUnread) {
         sb.rpc("mark_activity_read").then(() => {
@@ -140,6 +169,10 @@
         });
       }
     };
+    function wireAct() {
+      $("pane").querySelectorAll(".act-chips button").forEach((b) => (b.onclick = () => { actFilter = b.dataset.f; actShown = 20; $("pane").innerHTML = actHTML(); wireAct(); }));
+      const m = $("act-more"); if (m) m.onclick = () => { actShown += 20; $("pane").innerHTML = actHTML(); wireAct(); };
+    }
     main.querySelectorAll(".tabs2 button").forEach((b) => (b.onclick = () => show(b.dataset.t)));
     show(tab === "chats" && !chatUnread && actUnread ? "activity" : tab);
     return;
