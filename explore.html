@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261027-4">
+<link rel="stylesheet" href="styles.css?v=20261027-5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261027-4"></script>
-<script src="app.js?v=20261027-4"></script>
-<script src="icons.js?v=20261027-4" defer></script>
+<script src="config.js?v=20261027-5"></script>
+<script src="app.js?v=20261027-5"></script>
+<script src="icons.js?v=20261027-5" defer></script>
 <style>
   .ex-hero { text-align: center; padding: 26px 0 26px; }
   .ex-hero .lead { max-width: 520px; margin: 10px auto 22px; }
@@ -67,7 +67,7 @@
     <input type="search" id="q" placeholder="Search" autocomplete="off" enterkeyhint="search" aria-label="Search">
     <button type="button" class="clear" id="clear" aria-label="Clear search" hidden>✕</button>
   </form>
-  <div class="near-row"><button type="button" class="near-btn" id="near">📍 Near me</button></div>
+  <div class="near-row"><button type="button" class="near-btn" id="near">📍 Near me</button><button type="button" class="near-btn" id="liked" hidden>♥ Liked</button></div>
   <div class="people" id="people" hidden></div>
   <p class="results-note" id="note" hidden></p>
   <div id="grid"><p class="muted" style="text-align:center;padding:40px 0">Loading…</p></div>
@@ -81,7 +81,7 @@
   const sb = App.sb, esc = App.esc, $ = (id) => document.getElementById(id);
   document.querySelectorAll(".js-name").forEach((e) => (e.textContent = App.C.SITE_NAME));
   const PAGE = 30;
-  const COLS = "slug, title, image_path, photo_hidden, created_at, lat, lng, profiles!owner(handle, display_name), likes(count), comments(count)";
+  const COLS = "slug, title, is_private, image_path, photo_hidden, created_at, lat, lng, profiles!owner(handle, display_name), likes(count), comments(count)";
   let from = 0, all = [];
 
   const likes = (x) => (x.likes && x.likes[0] && x.likes[0].count) || 0;
@@ -135,9 +135,38 @@
   }
   $("more").onclick = loadPage;
 
+  // ── ♥ Liked: only appears once you've liked something ──
+  let likedOn = false, me = null;
+  App.getSession().then(async (s) => {
+    if (!s) return;
+    me = s.user.id;
+    const { count } = await sb.from("likes").select("experience_id", { count: "exact", head: true }).eq("user_id", me);
+    if (count > 0) $("liked").hidden = false;
+  }).catch(() => {});
+  function likedOff() { likedOn = false; $("liked").classList.remove("on"); $("liked").textContent = "♥ Liked"; }
+  $("liked").onclick = async () => {
+    if (likedOn) { likedOff(); runSearch(); return; }
+    if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; }
+    $("q").value = ""; $("clear").hidden = true; term = ""; showPeople([]);
+    likedOn = true; $("liked").classList.add("on"); $("liked").textContent = "♥ Liked ✕";
+    const myRun = ++runId;
+    $("more").hidden = true;
+    $("grid").innerHTML = '<p class="muted" style="text-align:center;padding:40px 0">Loading your likes…</p>';
+    const { data, error } = await sb.from("likes").select("created_at, experiences(" + COLS + ")")
+      .eq("user_id", me).order("created_at", { ascending: false }).limit(200);
+    if (myRun !== runId) return;
+    if (error) { likedOff(); return App.toast("Couldn't load your likes.", true); }
+    const rows = (data || []).map((r) => r.experiences).filter((x) => x && !x.is_private);
+    $("note").hidden = false;
+    $("note").textContent = rows.length ? "Posts you've liked, newest first" : "";
+    $("grid").innerHTML = rows.length ? '<div class="tiles">' + rows.map(card).join("") + "</div>"
+      : '<div class="empty"><p style="margin:10px 0 6px">No liked posts right now.</p></div>';
+  };
+
   // ── near me: closest AR with a location first ──
   let nearOn = false;
   $("near").onclick = async () => {
+    if (likedOn) likedOff();
     if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; runSearch(); return; }
     $("near").disabled = true; $("near").textContent = "Finding you…";
     let me;
@@ -168,6 +197,7 @@
   }
 
   async function runSearch() {
+    if (likedOn) likedOff();
     if (nearOn) { nearOn = false; $("near").classList.remove("on"); $("near").textContent = "📍 Near me"; }
     term = clean($("q").value);
     $("clear").hidden = !$("q").value;
