@@ -10,11 +10,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261027-3">
+<link rel="stylesheet" href="styles.css?v=20261027-5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261027-3"></script>
-<script src="app.js?v=20261027-3"></script>
-<script src="icons.js?v=20261027-3" defer></script>
+<script src="config.js?v=20261027-5"></script>
+<script src="app.js?v=20261027-5"></script>
+<script src="icons.js?v=20261027-5" defer></script>
 <style>
   :root { --cream: #fbf6ef; --ink: #1c1446; --ink-2: #554a7d; --line-l: #ece3d6; }
   body.home { background: var(--cream); }
@@ -102,12 +102,15 @@
   .ex .cap span { font-size: .82rem; opacity: .85; }
   .ex-empty { padding: 34px; border-radius: 20px; border: 2px dashed var(--line-l); text-align: center; color: var(--ink-2); grid-column: 1 / -1; }
 
-  .ideas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
-  .idea { background: #fff; border: 1px solid var(--line-l); border-radius: 22px; padding: 20px 12px; text-align: center; transition: transform .2s, box-shadow .2s; }
-  .idea:hover { transform: translateY(-3px); box-shadow: 0 16px 30px -22px rgba(30,15,80,.6); }
-  .idea .ic { width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 10px; display: grid; place-items: center; font-size: 1.75rem; background: #1d1538; }
-  .idea b { display: block; font-weight: 600; font-family: var(--fun); font-size: 1.05rem; }
-  .idea span { font-size: .85rem; color: var(--ink-2); }
+  .ideas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .idea { background: #fff; border: 1px solid var(--line-l); border-radius: 24px; padding: 10px 10px 18px; text-align: center; transition: transform .2s, box-shadow .2s; min-width: 0; }
+  .idea:hover { transform: translateY(-4px); box-shadow: 0 18px 34px -22px rgba(30,15,80,.6); }
+  .idea .ph { aspect-ratio: 3 / 2; border-radius: 16px; overflow: hidden; background: #ece6f7; }
+  .idea .ph img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s; }
+  .idea:hover .ph img { transform: scale(1.05); }
+  .idea .ic { position: relative; width: 52px; height: 52px; border-radius: 16px; margin: -26px auto 8px; display: grid; place-items: center; font-size: 1.6rem; background: #1d1538; border: 4px solid #fff; box-sizing: content-box; }
+  .idea b { display: block; font-weight: 600; font-family: var(--fun); font-size: 1.05rem; line-height: 1.2; margin-bottom: 3px; }
+  .idea span { display: block; text-wrap: balance; font-size: .85rem; color: var(--ink-2); line-height: 1.35; padding: 0 4px; }
   @media (max-width: 900px) { .ideas { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 520px) { .ideas { grid-template-columns: repeat(2, 1fr); } }
 
@@ -210,12 +213,12 @@
       <div class="wrapx">
         <div class="sec-head"><div><div class="eyebrow">Ideas</div><h2>Bring anything to <span class="magic-text">life</span></h2></div></div>
         <div class="ideas">
-          <div class="idea"><div class="ic"><i data-pwi="gift"></i></div><b>Birthday cards</b><span>A video message inside</span></div>
-          <div class="idea"><div class="ic">♥</div><b>Weddings</b><span>Photos that replay the day</span></div>
-          <div class="idea"><div class="ic"><i data-pwi="shop"></i></div><b>Businesses</b><span>Menus, flyers, cards</span></div>
-          <div class="idea"><div class="ic">🎨</div><b>Art &amp; murals</b><span>Show the story behind it</span></div>
-          <div class="idea"><div class="ic"><i data-pwi="music"></i></div><b>Music</b><span>Album covers that play</span></div>
-          <div class="idea"><div class="ic">📍</div><b>Scavenger hunts</b><span>Pin it, blur it, go find it</span></div>
+          <div class="idea"><div class="ph"><img src="img/idea-wedding.jpg" alt="Wedding cards example" loading="lazy"></div><div class="ic">♥</div><b>Wedding cards</b><span>Photos that replay the day</span></div>
+          <div class="idea"><div class="ph"><img src="img/idea-birthday.jpg" alt="Birthday cards example" loading="lazy"></div><div class="ic"><i data-pwi="gift"></i></div><b>Birthday cards</b><span>A video message that kids love</span></div>
+          <div class="idea"><div class="ph"><img src="img/idea-art.jpg" alt="Art &amp; murals example" loading="lazy"></div><div class="ic">🎨</div><b>Art &amp; murals</b><span>Show the story behind it</span></div>
+          <div class="idea"><div class="ph"><img src="img/idea-business.jpg" alt="Businesses example" loading="lazy"></div><div class="ic"><i data-pwi="shop"></i></div><b>Businesses</b><span>Menus, flyers, cards</span></div>
+          <div class="idea"><div class="ph"><img src="img/idea-music.jpg" alt="Music example" loading="lazy"></div><div class="ic"><i data-pwi="music"></i></div><b>Music</b><span>Albums come to life</span></div>
+          <div class="idea"><div class="ph"><img src="img/idea-hunt.jpg" alt="Scavenger hunts example" loading="lazy"></div><div class="ic">📍</div><b>Scavenger hunts</b><span>Print it out &amp; go find it</span></div>
         </div>
       </div>
     </section>
