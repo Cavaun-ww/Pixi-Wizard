@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261027-3">
+<link rel="stylesheet" href="styles.css?v=20261027-4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261027-3"></script>
-<script src="app.js?v=20261027-3"></script>
-<script src="icons.js?v=20261027-3" defer></script>
+<script src="config.js?v=20261027-4"></script>
+<script src="app.js?v=20261027-4"></script>
+<script src="icons.js?v=20261027-4" defer></script>
 <style>
   .ex-hero { text-align: center; padding: 26px 0 26px; }
   .ex-hero .lead { max-width: 520px; margin: 10px auto 22px; }
@@ -176,10 +176,15 @@
     $("grid").innerHTML = '<p class="muted" style="text-align:center;padding:40px 0">' + (term ? "Searching…" : "Loading…") + "</p>";
     $("more").hidden = true;
     if (term) {
-      const { data } = await sb.from("profiles").select("id, handle, display_name, avatar_path, experiences(count)")
+      let { data, error } = await sb.from("profiles").select("id, handle, display_name, avatar_path, experiences!owner(count)")
         .not("handle", "is", null)
         .or("handle.ilike.*" + term + "*,display_name.ilike.*" + term + "*")
         .eq("experiences.is_private", false).limit(50);
+      if (error) { // fall back to a simpler search so people and posts still show
+        console.warn("people search:", error.message);
+        ({ data } = await sb.from("profiles").select("id, handle, display_name, avatar_path")
+          .not("handle", "is", null).or("handle.ilike.*" + term + "*,display_name.ilike.*" + term + "*").limit(50));
+      }
       if (myRun !== runId) return;
       ownerIds = (data || []).map((r) => r.id);
       showPeople(data || []);
@@ -199,13 +204,13 @@
     const render = () => {
       const shown = open ? list : list.slice(0, 4);
       box.innerHTML = '<div class="people-h">People</div>' + shown.map((p) => {
-        const n = (p.experiences && p.experiences[0] && p.experiences[0].count) || 0;
+        const n = p.experiences && p.experiences[0] ? p.experiences[0].count : null;
         const name = p.display_name || "";
         const letter = (name || p.handle).charAt(0).toUpperCase();
         return '<a class="person" href="u.html?h=' + encodeURIComponent(p.handle) + '">' +
           '<span class="pav">' + (p.avatar_path ? '<img alt="" src="' + esc(App.publicUrl(p.avatar_path)) + '">' : esc(letter)) + "</span>" +
           '<span class="pinfo"><b data-noicon>' + esc(p.handle) + "</b>" +
-          '<span data-noicon>' + (name ? esc(name) + " · " : "") + n + " creation" + (n === 1 ? "" : "s") + "</span></span></a>";
+          '<span data-noicon>' + [name ? esc(name) : "", n == null ? "" : n + " creation" + (n === 1 ? "" : "s")].filter(Boolean).join(" · ") + "</span></span></a>";
       }).join("") + (list.length > 4 ? '<button type="button" class="people-more" id="people-more">' + (open ? "Show less" : "See all " + list.length + " people") + "</button>" : "");
       const m = $("people-more"); if (m) m.onclick = () => { open = !open; render(); };
     };
