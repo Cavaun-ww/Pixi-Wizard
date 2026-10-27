@@ -14,8 +14,8 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261026-3"></script>
-<script src="icons.js?v=20261026-3" defer></script>
+<script src="config.js?v=20261026-4"></script>
+<script src="icons.js?v=20261026-4" defer></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -158,9 +158,13 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
 .dia-i::before { content: ""; position: absolute; left: 50%; top: .06em; width: .21em; height: .21em; transform: translateX(-50%) rotate(45deg); border-radius: .035em; background: #f7a774; }
 .dia-i ~ .dia-i { color: #f283b6; -webkit-text-fill-color: #f283b6; }
 .dia-i ~ .dia-i::before { background: #f283b6; }
-.unlock-btn { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3; padding: 9px 16px; border-radius: 999px; border: 0; background: var(--magic); color: #fff; font: inherit; font-weight: 500; font-size: .88rem; white-space: nowrap; box-shadow: 0 8px 20px -8px rgba(255,95,210,.8); cursor: pointer; }
-.unlock-btn:disabled { opacity: .75; }
-.unlocked-tag { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3; padding: 7px 14px; border-radius: 999px; background: rgba(10,6,22,.75); color: #fff; font-size: .85rem; white-space: nowrap; transition: opacity .6s; }
+.lock-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; width: max-content; max-width: 82%; padding: 16px 18px 14px; border-radius: 20px; background: rgba(12,7,26,.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 14px 34px -14px rgba(0,0,0,.7); color: #fff; text-align: center; transition: opacity .6s; }
+.lock-card .lc-ic { font-size: 2rem; line-height: 1; margin-bottom: 6px; }
+.lock-card .lc-t { font-family: "Fredoka", sans-serif; font-weight: 500; font-size: 1.02rem; }
+.lock-card .lc-s { font-size: .8rem; color: #cfc3ea; margin: 3px 0 12px; line-height: 1.35; }
+.lock-card .lc-btn { padding: 8px 18px; border-radius: 999px; border: 0; background: var(--magic); color: #fff; font: inherit; font-weight: 500; font-size: .85rem; cursor: pointer; box-shadow: 0 6px 16px -6px rgba(255,95,210,.8); }
+.lock-card .lc-btn:disabled { opacity: .7; }
+.lock-card.done { padding: 10px 18px; }
 #target-img { transition: filter .8s, transform .8s; }
 </style>
 </head>
@@ -559,10 +563,16 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
   // ── blurred + pinned: the photo clears up only when you're there ──
   function nearbyUnlock(xp, wrap, tag) {
     var radius = xp.loc_approx ? 1.0 : 0.15;   // miles (~1.6 km for "approximate area", ~250 m for an exact pin)
-    tag.innerHTML = "🙈 Go to the spot to unlock this photo";
-    var btn = document.createElement("button");
-    btn.type = "button"; btn.className = "unlock-btn"; btn.textContent = "📍 I'm here, unlock it";
-    wrap.appendChild(btn);
+    tag.remove();
+    var card = document.createElement("div");
+    card.className = "lock-card";
+    card.innerHTML =
+      '<div class="lc-ic">🙈</div>' +
+      '<div class="lc-t">Locked until you\'re there</div>' +
+      '<div class="lc-s" id="lc-s">' + (xp.place_name ? "Go to " + esc(xp.place_name) + " to reveal it" : "Go to the spot to reveal it") + '</div>' +
+      '<button type="button" class="lc-btn" id="lc-btn">I\'m here, unlock</button>';
+    wrap.appendChild(card);
+    var btn = card.querySelector("#lc-btn"), sub = card.querySelector("#lc-s");
     function miles(a, b) {
       var R = 3958.8, r = function (d) { return d * Math.PI / 180; };
       var dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
@@ -570,27 +580,26 @@ img.blurred { filter: blur(22px) saturate(.85) brightness(.9); transform: scale(
       return 2 * R * Math.asin(Math.sqrt(h));
     }
     function check(quiet) {
-      if (!navigator.geolocation) { if (!quiet) tag.textContent = "This phone can't share its location."; return; }
-      if (!quiet) { btn.disabled = true; btn.textContent = "Checking where you are…"; }
+      if (!navigator.geolocation) { if (!quiet) sub.textContent = "This phone can't share its location."; return; }
+      if (!quiet) { btn.disabled = true; btn.textContent = "Checking…"; }
       navigator.geolocation.getCurrentPosition(function (p) {
         var d = miles({ lat: p.coords.latitude, lng: p.coords.longitude }, { lat: xp.lat, lng: xp.lng });
         if (d <= radius) {
           $("target-img").classList.remove("blurred");
-          tag.remove(); btn.remove();
-          var ok = document.createElement("span"); ok.className = "unlocked-tag"; ok.textContent = "✨ You found it! Unlocked"; wrap.appendChild(ok);
-          setTimeout(function () { ok.style.opacity = 0; }, 3500);
+          card.classList.add("done");
+          card.innerHTML = '<div class="lc-t">✨ You found it!</div>';
+          setTimeout(function () { card.style.opacity = 0; setTimeout(function () { card.remove(); }, 600); }, 2500);
         } else if (!quiet) {
-          tag.textContent = "📍 You're " + (d < 10 ? d.toFixed(1) : Math.round(d)) + " mi away. Get closer to unlock it";
-          btn.disabled = false; btn.textContent = "📍 Check again";
+          sub.textContent = "You're " + (d < 10 ? d.toFixed(1) : Math.round(d)) + " mi away. Get a little closer";
+          btn.disabled = false; btn.textContent = "Check again";
         }
       }, function (e) {
         if (quiet) return;
-        tag.textContent = e.code === 1 ? "Turn on location for this site to unlock it" : "Couldn't find your location. Try again";
-        btn.disabled = false; btn.textContent = "📍 Try again";
+        sub.textContent = e.code === 1 ? "Turn on location for this site to unlock it" : "Couldn't find your location";
+        btn.disabled = false; btn.textContent = "Try again";
       }, { enableHighAccuracy: true, timeout: 12000, maximumAge: quiet ? 60000 : 0 });
     }
     btn.onclick = function () { check(false); };
-    // if they already allowed location before, check quietly right away
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions.query({ name: "geolocation" }).then(function (st) { if (st.state === "granted") check(true); }).catch(function () {});
     }
