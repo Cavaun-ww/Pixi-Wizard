@@ -165,8 +165,8 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 /* ── Experience grid ──────────────────────── */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-.xp { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: transform .2s, border-color .2s, box-shadow .2s; }
-.xp:hover { transform: translateY(-3px) rotate(-.4deg); border-color: var(--line-2); box-shadow: 0 14px 30px -12px rgba(168,85,247,.5); }
+.xp { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: border-color .2s, box-shadow .2s; }
+.xp:hover { border-color: var(--line-2); box-shadow: 0 14px 30px -12px rgba(168,85,247,.5); }
 .xp .thumb { aspect-ratio: 4/3; background: #000; object-fit: cover; width: 100%; }
 .xp .body { padding: 14px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
 .xp .title { font-size: 1.05rem; font-weight: 400; overflow-wrap: anywhere; }
