@@ -551,9 +551,34 @@
     }
   }
 
+  // A 64-bit "fingerprint" of a picture (16 hex characters). The same picture, even resized or
+  // re-saved, gives nearly the same fingerprint, so posts that share a target can be grouped.
+  async function imageHash(src) {
+    let el = src;
+    if (src instanceof Blob) el = await createImageBitmap(src);
+    else if (typeof src === "string") el = await new Promise((ok, no) => {
+      const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = no; i.src = src;
+    });
+    const W = 72, H = 64, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d", { willReadFrequently: true });
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
+    x.drawImage(el, 0, 0, W, H);
+    const d = x.getImageData(0, 0, W, H).data, g = new Float64Array(72);
+    for (let y = 0; y < H; y++) for (let k = 0; k < W; k++) {
+      const o = (y * W + k) * 4; g[(y >> 3) * 9 + (k >> 3)] += d[o] * 0.299 + d[o + 1] * 0.587 + d[o + 2] * 0.114;
+    }
+    let hex = "";
+    for (let r = 0; r < 8; r++) for (let h = 0; h < 2; h++) {
+      let n = 0;
+      for (let b = 0; b < 4; b++) { const col = h * 4 + b; n = (n << 1) | (g[r * 9 + col] > g[r * 9 + col + 1] ? 1 : 0); }
+      hex += n.toString(16);
+    }
+    return hex;
+  }
+
   window.App = {
     C, sb, configured, BUCKET, siteRoot, esc, publicUrl, arLink, profileLink, toast,
-    brandName, timeAgo, mountEffects, effectsSummary, loadLeaflet, makeMap, pinIcon, pickLocation, hereNow, milesBetween, distLabel, directionsUrl, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
+    brandName, timeAgo, imageHash, mountEffects, effectsSummary, loadLeaflet, makeMap, pinIcon, pickLocation, hereNow, milesBetween, distLabel, directionsUrl, getSession, requireAuth, myPlan, callFunction, openUpgrade, cancelSubscription,
     renderQR, copy, share, mountHeader, confetti, ensureHandle, avatarHTML, squareJpeg, THEMES, applyTheme, applyBackground, BG_COLORS,
   };
 })();

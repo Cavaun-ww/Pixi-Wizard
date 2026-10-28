@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261027-6">
+<link rel="stylesheet" href="styles.css?v=20261028-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261027-6"></script>
-<script src="app.js?v=20261027-6"></script>
-<script src="icons.js?v=20261027-6" defer></script>
+<script src="config.js?v=20261028-1"></script>
+<script src="app.js?v=20261028-1"></script>
+<script src="icons.js?v=20261028-1" defer></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -392,6 +392,18 @@
     renderList();
   }
 
+  // posts made before same-picture grouping existed: fill in their photo fingerprint in the background
+  async function backfillHashes() {
+    const { data, error } = await sb.from("experiences").select("id, image_path").eq("owner", uid).is("image_hash", null).limit(30);
+    if (error || !data) return; // database not updated yet
+    for (const x of data) {
+      try {
+        const h = await App.imageHash(App.publicUrl(x.image_path) + "?fp=1");
+        await sb.from("experiences").update({ image_hash: h }).eq("id", x.id);
+      } catch (e) { /* try again next visit */ }
+    }
+  }
+
   // ── search / filter / sort my creations ──
   let allMine = [], mineFilter = "all";
   const openMore = new Set(); // keep a card's settings open after it refreshes
@@ -562,6 +574,7 @@
   }
 
   await Promise.all([loadProfile(), loadList()]);
+  backfillHashes();
   let plan = await loadPlan().catch((e) => App.toast(e.message, true));
 
   // "Go Pro" from the pricing page or the paywall

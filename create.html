@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261027-6">
+<link rel="stylesheet" href="styles.css?v=20261028-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261027-6"></script>
-<script src="app.js?v=20261027-6"></script>
-<script src="icons.js?v=20261027-6" defer></script>
+<script src="config.js?v=20261028-1"></script>
+<script src="app.js?v=20261028-1"></script>
+<script src="icons.js?v=20261028-1" defer></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -544,6 +544,9 @@
       const mindBytes = await compiler.exportData();
       const mindBlob = new Blob([mindBytes], { type: "application/octet-stream" });
 
+      let imageHash = null;
+      try { imageHash = await App.imageHash(img.blob); } catch (e) { console.warn("fingerprint failed", e); }
+
       // 3. upload files
       const folder = uid + "/" + crypto.randomUUID();
       const isPic = vid.kind === "image";
@@ -563,7 +566,7 @@
 
       // 4. save the experience
       progress(95, "Almost done…");
-      const { data: row, error } = await sb.from("experiences").insert({
+      const payload = {
         owner: uid,
         title: $("title").value.trim().slice(0, 80),
         image_path: files[0].path,
@@ -572,10 +575,16 @@
         image_aspect: img.w / img.h,
         video_aspect: vid.w / vid.h,
         is_private: $("is-private").checked,
+        ...(imageHash ? { image_hash: imageHash } : {}),
         photo_hidden: $("photo-hidden").checked,
         ...fx.get(),
         ...(loc ? { lat: loc.lat, lng: loc.lng, place_name: loc.place_name, place_area: loc.place_area, loc_approx: loc.loc_approx } : {}),
-      }).select("slug").single();
+      };
+      let { data: row, error } = await sb.from("experiences").insert(payload).select("slug").single();
+      if (error && /image_hash/.test(error.message || "")) { // database not updated yet: save without the fingerprint
+        delete payload.image_hash;
+        ({ data: row, error } = await sb.from("experiences").insert(payload).select("slug").single());
+      }
       if (error) throw error;
       progress(100, "Done");
 

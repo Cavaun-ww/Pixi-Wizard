@@ -14,8 +14,8 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261027-6"></script>
-<script src="icons.js?v=20261027-6" defer></script>
+<script src="config.js?v=20261028-1"></script>
+<script src="icons.js?v=20261028-1" defer></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -92,6 +92,7 @@ body.desktop #target-img { max-height:26vh; }
 #now-playing .np-av img { width:100%; height:100%; object-fit:cover; }
 #now-playing .np-text { min-width:0; display:flex; flex-direction:column; line-height:1.2; }
 #now-playing .np-title { font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.same-note { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(168,85,247,.12); border: 1px solid rgba(168,85,247,.3); font-size: .85rem; line-height: 1.4; color: inherit; text-align: left; }
 #now-playing .np-by { font-size:.78rem; color:var(--accent-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #now-playing .np-go { margin-left:4px; opacity:.7; }
 .collage { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; margin-bottom:16px; }
@@ -256,6 +257,11 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   var mindSrc = null;    // single .mind URL, or a merged one for Explore
   var videos = [];       // one <video> per target, created when needed
   var currentIdx = -1;   // which target is on screen
+  // same picture used by several people: one target ("slot") holds all their overlays, oldest first.
+  // Each time the picture is found again, the next person's overlay shows.
+  var slots = [];        // slots[targetIndex] = [indexes into xps]
+  var turn = [];         // turn[targetIndex] = which of those is showing
+  var seen = [], lostAt = [], lastShown = [];
 
   $("site-name").innerHTML = C.SITE_NAME.replace(/[&<>]/g, "").split(" ").map(function (w, i) { return i ? w : w.replace(/i/g, '<span class="dia-i">\u0131</span>'); }).join(" ");
   document.querySelectorAll(".js-name").forEach(function (e) { e.textContent = C.SITE_NAME; });
@@ -302,6 +308,22 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     return { xps: kept, url: URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" })) };
   }
 
+  // put posts that use the same picture together (fingerprints within 10 of 64 bits), oldest first
+  function hamming(a, b) {
+    var n = 0;
+    for (var i = 0; i < 16; i++) { var x = parseInt(a[i], 16) ^ parseInt(b[i], 16); while (x) { n += x & 1; x >>= 1; } }
+    return n;
+  }
+  function groupSame(list) {
+    var sorted = list.slice().sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+    var groups = [];
+    sorted.forEach(function (x) {
+      var g = (!x.is_private && x.image_hash) ? groups.find(function (g) { var l = g[0]; return !l.is_private && l.image_hash && hamming(l.image_hash, x.image_hash) <= 10; }) : null;
+      if (g) g.push(x); else groups.push([x]);
+    });
+    return groups;
+  }
+
   function ready() {
     $("start-btn").textContent = "🪄 Start AR camera";
     $("start-btn").disabled = !isMobile; // AR is phone/tablet only
@@ -311,7 +333,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   // ── load ────────────────────────────────────────────────────
   (async function load() {
     if (typeof AFRAME === "undefined") { setStatus("AR library failed to load — try refreshing", "err"); return; }
-    var cols = "id, owner, slug, title, image_path, photo_hidden, pop_scale, lift, key_mode, mind_path, video_path, image_aspect, video_aspect, is_private, lat, lng, place_name, loc_approx, profiles!owner(handle, display_name, avatar_path)";
+    var cols = "id, owner, slug, title, created_at, image_path, photo_hidden, pop_scale, lift, key_mode, mind_path, video_path, image_aspect, video_aspect, is_private, lat, lng, place_name, loc_approx, profiles!owner(handle, display_name, avatar_path)";
 
     if (isExplore) {
       document.title = "Explore · " + C.SITE_NAME;
@@ -328,9 +350,17 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
       $("collage").hidden = false;
       if (!isMobile) { $("by").innerHTML = publicList.length + ' photos from the community · <a href="explore.html">see all</a>'; $("start-btn").textContent = "🪄 Start AR camera"; return; }
       setStatus("Getting the magic ready…");
-      var merged = await mergeMinds(list);
+      var hashes = await sb.from("experiences").select("id, image_hash").in("id", list.map(function (x) { return x.id; }));
+      if (!hashes.error && hashes.data) { var hm = {}; hashes.data.forEach(function (h) { hm[h.id] = h.image_hash; }); list.forEach(function (x) { x.image_hash = hm[x.id] || null; }); }
+      var groups = groupSame(list);
+      var merged = await mergeMinds(groups.map(function (g) { return g[0]; }));
       if (!merged) { setStatus("Couldn't load the photos. Try refreshing.", "err"); return; }
-      xps = merged.xps; mindSrc = merged.url;
+      mindSrc = merged.url; xps = []; slots = [];
+      merged.xps.forEach(function (leader) {
+        var g = groups.find(function (g) { return g[0] === leader; }) || [leader];
+        slots.push(g.map(function (m) { xps.push(m); return xps.length - 1; }));
+      });
+      turn = slots.map(function () { return 0; });
       $("by").innerHTML = publicList.length + ' photos from the community · <a href="explore.html">see all</a>';
       setStatus("");
       ready();
@@ -347,6 +377,25 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     }
     xps = [res.data]; mindSrc = pub(res.data.mind_path);
     var xp = res.data;
+    slots = [[0]]; turn = [0];
+    // other people who used the same picture: their overlays take turns on this one
+    try {
+      var same = await sb.rpc("same_target", { xid: xp.id });
+      if (!same.error && same.data && same.data.length > 1) {
+        var ids = same.data.map(function (r) { return r.id; });
+        var others = await sb.from("experiences").select(cols).in("id", ids);
+        if (!others.error && others.data) {
+          var byId = {}; others.data.forEach(function (o) { byId[o.id] = o; });
+          byId[xp.id] = xp;
+          var ordered = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+          if (ordered.length > 1) {
+            xps = ordered;
+            slots = [ordered.map(function (o, i) { return i; })];
+            turn = [Math.max(0, ordered.indexOf(xp))]; // start with this post, then the next one uploaded
+          }
+        }
+      }
+    } catch (e) { /* database not updated yet: just this post */ }
     document.title = xp.title + " · " + C.SITE_NAME;
     $("title").textContent = xp.title;
     var p = xp.profiles;
@@ -374,6 +423,11 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
       $("step2").innerHTML = "Find <b>the real photo</b>" + (xp.place_name ? " at <b>" + esc(xp.place_name) + "</b>" : "") + " and point your phone at it";
     }
     $("target-img").hidden = false;
+    if (xps.length > 1) {
+      var more = document.createElement("div"); more.className = "same-note";
+      more.textContent = "🔁 " + xps.length + " creations use this picture. Point away and back to see the next one.";
+      var st3 = $("step3").parentNode; st3.parentNode.insertBefore(more, st3.nextSibling);
+    }
     if (isNew) {
       $("new-banner").hidden = false;
       $("mypage-link").hidden = false;
@@ -458,7 +512,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
 
   // tappable label at the top: who made this → their page
   var npTimer = null;
-  function showCreator(xp) {
+  function showCreator(xp, pos, total) {
     var p = xp.profiles || {}, np = $("now-playing");
     clearTimeout(npTimer); np.classList.remove("fading");
     var name = p.display_name || (p.handle ? "@" + p.handle : "");
@@ -469,7 +523,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
       (p.handle ? '<span class="np-go">›</span>' : "");
     if (!p.avatar_path) np.querySelector(".np-av").textContent = letter;
     np.querySelector(".np-title").textContent = "✨ " + xp.title;
-    np.querySelector(".np-by").textContent = name ? "by " + name : "";
+    np.querySelector(".np-by").textContent = (name ? "by " + name : "") + (total > 1 ? (name ? " · " : "") + pos + " of " + total : "");
     np.href = p.handle ? "u.html?h=" + encodeURIComponent(p.handle) : "#";
     np.classList.add("show");
   }
@@ -494,7 +548,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     v.crossOrigin = "anonymous";
     v.loop = true; v.muted = false; v.volume = 1; v.playsInline = true;
     v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
-    v.preload = xps.length > 1 ? "none" : "auto"; // Explore: only download a video once its photo is found
+    v.preload = (isExplore || (slots[0] && slots[0][turn[0]] !== i)) ? "none" : "auto"; // only download a video once it's its turn
     v.style.cssText = "position:fixed;bottom:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;";
     document.body.appendChild(v);
     videos[i] = v;
@@ -504,9 +558,11 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   // ── overlay: keeps its own shape, fitted inside the photo ──
   if (typeof AFRAME !== "undefined") {
     AFRAME.registerComponent("video-overlay", {
-      schema: { idx: { type: "int", default: 0 } },
+      schema: { idx: { type: "int", default: 0 }, slot: { type: "int", default: 0 } },
       init: function () {
-        var idx = this.data.idx, xp = xps[idx];
+        var idx = this.data.idx, slot = this.data.slot, xp = xps[idx];
+        var group = slots[slot] || [idx];
+        function mine() { return group[turn[slot] || 0] === idx; }
         if (!xp) return;
         var photo = isPhoto(xp), gif = isGif(xp);
         var video = isVideo(xp) ? makeVideo(idx) : null;
@@ -542,11 +598,14 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
 
         var self = this, targetEl = this.el.parentNode;
         targetEl.addEventListener("targetFound", function () {
+          if (!mine()) { self.visible = false; return; } // someone else's turn on this picture
           self.visible = true;
           currentIdx = idx;
           $("scan-hint").classList.remove("show");
-          showCreator(xp);
+          showCreator(xp, group.indexOf(idx) + 1, group.length);
+          var fresh = lastShown[slot] !== idx; lastShown[slot] = idx;
           if (!video) return; // photo or GIF overlay: no sound to start
+          if (fresh && group.length > 1) { try { video.currentTime = 0; } catch (e) {} }
           video._wanted = true;
           video.play().catch(function () {
             // sound blocked by the browser → play muted and offer a tap-for-sound button
@@ -556,8 +615,10 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
           });
         });
         targetEl.addEventListener("targetLost", function () {
+          var wasOn = self.visible;
           self.visible = false;
           if (video) { video._wanted = false; video.pause(); }
+          if (!wasOn) return;
           if (currentIdx === idx) fadeCreator();
           $("scan-hint").classList.add("show");
         });
@@ -816,9 +877,10 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     $("scan-hint").textContent = isExplore ? "Point at any photo from Explore" : "Point at the image";
     $("scan-hint").classList.add("show");
 
-    if (xps.length === 1 && isVideo(xps[0])) {
+    var first = isExplore ? -1 : slots[0][turn[0]];
+    if (first >= 0 && isVideo(xps[first])) {
       // "unlock" playback with sound while we're still inside the tap (needed on iPhone)
-      var v0 = makeVideo(0);
+      var v0 = makeVideo(first);
       var unlock = v0.play();
       if (unlock && unlock.then) unlock.then(function () { if (!v0._wanted) { v0.pause(); v0.currentTime = 0; } }).catch(function () {});
     }
@@ -856,19 +918,29 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     scene.appendChild(cam);
 
     var overlays = [];
-    xps.forEach(function (x, i) {
+    seen = []; lostAt = []; lastShown = [];
+    slots.forEach(function (members, s) {
       var t = document.createElement("a-entity");
-      t.setAttribute("mindar-image-target", "targetIndex: " + i);
-      var ov = document.createElement("a-entity");
-      ov.id = "overlay" + i;
-      ov.setAttribute("position", "0 0 0.01");
-      t.appendChild(ov);
+      t.setAttribute("mindar-image-target", "targetIndex: " + s);
+      // pointing away and back again → next person's overlay (a quick wobble doesn't count)
+      t.addEventListener("targetFound", function () {
+        if (members.length > 1 && seen[s] && Date.now() - (lostAt[s] || 0) > 1200) turn[s] = (turn[s] + 1) % members.length;
+        seen[s] = true;
+      });
+      t.addEventListener("targetLost", function () { lostAt[s] = Date.now(); });
+      members.forEach(function (i) {
+        var ov = document.createElement("a-entity");
+        ov.id = "overlay" + i;
+        ov.setAttribute("position", "0 0 0.01");
+        ov.dataset.slot = s;
+        t.appendChild(ov);
+        overlays.push(ov);
+      });
       scene.appendChild(t);
-      overlays.push(ov);
     });
 
     scene.addEventListener("loaded", function () {
-      overlays.forEach(function (ov, i) { ov.setAttribute("video-overlay", "idx: " + i); });
+      overlays.forEach(function (ov) { ov.setAttribute("video-overlay", "idx: " + ov.id.slice(7) + "; slot: " + ov.dataset.slot); });
     });
     scene.addEventListener("arError", function () {
       closeAR();
