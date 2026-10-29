@@ -89,8 +89,7 @@ body.desktop #target-img { max-height:26vh; }
 /* side rail: photo + record, out of the way on the right edge */
 #cap-rail { display:none; position:fixed; right:12px; top:50%; transform:translateY(-50%); z-index:2000;
   flex-direction:column; align-items:center; gap:10px; padding:8px; border-radius:999px;
-  background:rgba(12,8,28,.42); border:1px solid rgba(255,255,255,.18);
-  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,.25);
+  background:rgba(12,8,28,.55); border:1px solid rgba(255,255,255,.18); box-shadow:0 8px 24px rgba(0,0,0,.25);
   -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 #cap-rail.show { display:flex; }
 .cap-btn { position:relative; width:48px; height:48px; border-radius:50%; border:0; padding:0; cursor:pointer; display:grid; place-items:center;
@@ -997,7 +996,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
       // quick white flash, added only for a moment so nothing white ever sits over the camera
       var fl = document.createElement("div"); fl.className = "cap-flash"; document.body.appendChild(fl);
       requestAnimationFrame(function () { fl.style.opacity = 0; setTimeout(function () { fl.remove(); }, 350); });
-      c.toBlob(function (b) { if (b) showCapture(b, "photo"); else toastMsg("Couldn't take the photo. Try again"); }, "image/jpeg", 0.92);
+      c.toBlob(function (b) { c.width = c.height = 0; if (b) showCapture(b, "photo"); else toastMsg("Couldn't take the photo. Try again"); }, "image/jpeg", 0.92);
     });
   }
 
@@ -1053,13 +1052,15 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
       if (!rec || !rec._sound) return;
       if (rec.state === "recording" && rec._chunks.length) return; // it's working
       var old = rec; old.onstop = null; try { old.stop(); } catch (e) {}
+      try { old.stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
       var r2 = begin(false); if (r2) { r2.onstop = onStop; rec = r2; }
     }, 1300);
     function onStop() {
       painting = false;
       var r = this, type = ((r.mimeType || mime || "video/mp4").split(";")[0]) || "video/mp4";
       var b = new Blob(r._chunks, { type: type });
-      if (recCanvas) { recCanvas.remove(); recCanvas = null; }
+      try { r.stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+      if (recCanvas) { recCanvas.remove(); recCanvas.width = recCanvas.height = 0; recCanvas = null; }
       rec = null;
       if (rec_cancel) return;
       if (b.size) showCapture(b, "video");
@@ -1139,6 +1140,12 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
 
   // ── start / stop ────────────────────────────────────────────
   $("start-btn").onclick = function startAR() {
+    // opening the camera a second time on the same page: start fresh instead, so nothing piles up
+    if (arUsed) {
+      var u = new URL(location.href); u.searchParams.set("go", "1"); u.searchParams.delete("new");
+      location.replace(u.toString());
+      return;
+    }
     if (!xps.length || !mindSrc || !isMobile) return;
     $("splash").style.display = "none";
     $("ar-close").classList.add("show");
@@ -1163,6 +1170,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
           if (n.nodeType === 1 && n.tagName === "VIDEO" && videos.indexOf(n) === -1) {
             [["position","fixed"],["top","0"],["left","0"],["width","100vw"],["height","100vh"],["object-fit","cover"],["z-index","1"],["display","block"],["background","#000"]]
               .forEach(function (kv) { n.style.setProperty(kv[0], kv[1], "important"); });
+            kickCamera(n);
             camObserver.disconnect();
           }
         }
@@ -1219,10 +1227,26 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     document.body.appendChild(scene);
   };
 
+  // iPhones sometimes leave the camera blank (white) until something on screen changes;
+  // nudge it to repaint a few times once it starts, which is what tapping a button was doing
+  function kickCamera(v) {
+    var nudge = function () {
+      if (!v.isConnected) return;
+      if (v.paused) v.play().catch(function () {});
+      v.style.setProperty("transform", "translateZ(0)", "important");
+      requestAnimationFrame(function () { v.style.removeProperty("transform"); });
+    };
+    v.addEventListener("playing", function () { nudge(); setTimeout(nudge, 400); setTimeout(nudge, 1200); }, { once: true });
+    setTimeout(nudge, 2500); setTimeout(nudge, 5000);
+  }
+  var arUsed = false;
   function closeAR() {
     var sceneEl = document.querySelector("a-scene");
     if (sceneEl) {
+      arUsed = true;
       try { var sys = sceneEl.systems["mindar-image-system"]; if (sys) sys.stop(); } catch (e) {}
+      // hand the graphics memory back right away (iPhones only allow so much, then go blank)
+      try { sceneEl.renderer.dispose(); sceneEl.renderer.forceContextLoss(); } catch (e) {}
       sceneEl.parentNode.removeChild(sceneEl);
     }
     document.querySelectorAll("video").forEach(function (v) {
