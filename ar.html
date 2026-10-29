@@ -83,20 +83,28 @@ body.desktop #target-img { max-height:26vh; }
   padding:10px 18px; border-radius:100px; font-size:0.85rem; white-space:nowrap;
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); font-family:inherit;
 }
-#scan-hint { bottom:calc(118px + env(safe-area-inset-bottom)); }
-#unmute { bottom:calc(168px + env(safe-area-inset-bottom)); cursor:pointer; }
+#scan-hint { bottom:calc(28px + env(safe-area-inset-bottom)); }
+#unmute { bottom:calc(84px + env(safe-area-inset-bottom)); cursor:pointer; }
 /* ── capture: tap for a photo, hold for a video ── */
-#shutter { display:none; position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:2000;
-  width:76px; height:76px; border-radius:50%; border:0; padding:0; background:none; cursor:pointer;
-  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:none; -webkit-tap-highlight-color:transparent; }
-#shutter.show { display:block; }
-#shutter .ring { position:absolute; inset:0; border-radius:50%; border:5px solid rgba(255,255,255,.95); box-shadow:0 4px 18px rgba(0,0,0,.35); }
-#shutter .dot { position:absolute; inset:11px; border-radius:50%; background:rgba(255,255,255,.92); transition:inset .2s, border-radius .2s, background .2s; }
-#shutter:active .dot { inset:14px; }
-#shutter.rec .dot { inset:22px; border-radius:8px; background:#ff3b5c; }
-#shutter svg { position:absolute; inset:-6px; width:88px; height:88px; transform:rotate(-90deg); pointer-events:none; }
-#shutter svg circle { fill:none; stroke:#ff3b5c; stroke-width:5; stroke-linecap:round; stroke-dasharray:264; stroke-dashoffset:264; }
-#cap-tip { bottom:calc(108px + env(safe-area-inset-bottom)); font-size:.78rem; padding:7px 14px; pointer-events:none; transition:opacity .4s; }
+/* side rail: photo + record, out of the way on the right edge */
+#cap-rail { display:none; position:fixed; right:12px; top:50%; transform:translateY(-50%); z-index:2000;
+  flex-direction:column; align-items:center; gap:10px; padding:8px; border-radius:999px;
+  background:rgba(12,8,28,.42); border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,.25);
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+#cap-rail.show { display:flex; }
+.cap-btn { position:relative; width:48px; height:48px; border-radius:50%; border:0; padding:0; cursor:pointer; display:grid; place-items:center;
+  background:rgba(255,255,255,.12); color:#fff; -webkit-tap-highlight-color:transparent; touch-action:manipulation; transition:transform .15s, background .2s; }
+.cap-btn:active { transform:scale(.9); }
+.cap-btn svg.ic { width:24px; height:24px; }
+#cap-rec .recdot { width:20px; height:20px; border-radius:50%; background:#ff3b5c; box-shadow:0 0 0 3px rgba(255,255,255,.9); transition:all .2s; }
+#cap-rec.on { background:rgba(255,59,92,.18); }
+#cap-rec.on .recdot { width:16px; height:16px; border-radius:4px; box-shadow:none; }
+#cap-rec svg.prog { position:absolute; inset:-3px; width:54px; height:54px; transform:rotate(-90deg); pointer-events:none; }
+#cap-rec svg.prog circle { fill:none; stroke:#ff3b5c; stroke-width:3; stroke-linecap:round; stroke-dasharray:157; stroke-dashoffset:157; }
+#cap-time { display:none; font-size:.72rem; font-weight:600; color:#fff; font-variant-numeric:tabular-nums; letter-spacing:.02em; margin-top:-4px; }
+#cap-rail.recording #cap-time { display:block; }
+#cap-rail.recording #cap-photo { opacity:.35; pointer-events:none; }
 #cap-flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:2500; transition:opacity .35s; }
 #cap-flash.on { opacity:.8; transition:none; }
 #cap-view { display:none; position:fixed; inset:0; z-index:3000; background:rgba(8,5,18,.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
@@ -261,8 +269,11 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
 <button id="ar-close" aria-label="Close camera">✕</button>
 <div class="pill-float" id="scan-hint">Point at the image</div>
 <button class="pill-float" id="unmute">🔇 Tap for sound</button>
-<div class="pill-float" id="cap-tip">Tap for photo · hold for video</div>
-<button id="shutter" aria-label="Take a photo, or hold to record a video"><span class="ring"></span><span class="dot"></span><svg viewBox="0 0 88 88"><circle cx="44" cy="44" r="42"/></svg></button>
+<div id="cap-rail">
+  <button type="button" class="cap-btn" id="cap-photo" aria-label="Take a photo"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.4-2h6.2L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
+  <button type="button" class="cap-btn" id="cap-rec" aria-label="Record a video"><span class="recdot"></span><svg class="prog" viewBox="0 0 54 54"><circle cx="27" cy="27" r="25"/></svg></button>
+  <span id="cap-time">0:00</span>
+</div>
 <div id="cap-flash"></div>
 <div id="cap-view" role="dialog" aria-label="Your capture">
   <div id="cap-media"></div>
@@ -1014,41 +1025,38 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     rec_cancel = false;
     rec.start(500);
     recStart = Date.now();
-    $("shutter").classList.add("rec");
-    var circle = $("shutter").querySelector("circle");
+    $("cap-rec").classList.add("on"); $("cap-rail").classList.add("recording");
+    $("cap-rec").setAttribute("aria-label", "Stop recording");
+    var circle = $("cap-rec").querySelector("circle");
     recTimer = setInterval(function () {
-      var p = Math.min(1, (Date.now() - recStart) / (MAX_REC * 1000));
-      circle.style.strokeDashoffset = 264 * (1 - p);
+      var secs = (Date.now() - recStart) / 1000, p = Math.min(1, secs / MAX_REC);
+      circle.style.strokeDashoffset = 157 * (1 - p);
+      $("cap-time").textContent = "0:" + String(Math.floor(secs)).padStart(2, "0");
       if (p >= 1) stopRec();
     }, 100);
   }
   var rec_cancel = false;
   function stopRec(cancel) {
     clearInterval(recTimer); recTimer = null;
-    $("shutter").classList.remove("rec");
-    $("shutter").querySelector("circle").style.strokeDashoffset = 264;
+    $("cap-rec").classList.remove("on"); $("cap-rail").classList.remove("recording");
+    $("cap-rec").setAttribute("aria-label", "Record a video");
+    $("cap-rec").querySelector("circle").style.strokeDashoffset = 157;
+    $("cap-time").textContent = "0:00";
     capHook = null;
     if (rec && rec.state !== "inactive") { rec_cancel = !!cancel; try { rec.stop(); } catch (e) {} }
   }
 
-  // tap = photo, hold = video
-  var holdTimer = null, holding = false;
-  $("shutter").addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    if (rec) return;
-    holding = false;
+  // photo button / record button (tap to start, tap again to stop)
+  function audioOn() {
     // sound for recordings has to be switched on inside the tap itself (iPhone rule)
     try { if (!recAudio) { var AC = window.AudioContext || window.webkitAudioContext; recAudio = { ctx: new AC() }; } recAudio.ctx.resume(); } catch (err) {}
-    holdTimer = setTimeout(function () { holding = true; startRec(); }, 350);
-  });
-  function release() {
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    if (holding) { holding = false; stopRec(); }
-    else if (!rec) takePhoto();
   }
-  $("shutter").addEventListener("pointerup", function (e) { e.preventDefault(); release(); });
-  $("shutter").addEventListener("pointercancel", function () { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } if (holding) { holding = false; stopRec(); } });
-  $("shutter").addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  $("cap-photo").onclick = function () { if (!rec) takePhoto(); };
+  $("cap-rec").onclick = function () {
+    if (rec) { stopRec(); return; }
+    audioOn(); startRec();
+  };
+  $("cap-rail").addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
   // ── preview + save / share (stays on the phone) ──
   var capFile = null, capUrl = null;
@@ -1090,8 +1098,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     if (!xps.length || !mindSrc || !isMobile) return;
     $("splash").style.display = "none";
     $("ar-close").classList.add("show");
-    $("shutter").classList.add("show");
-    { $("cap-tip").classList.add("show"); $("cap-tip").style.opacity = 1; setTimeout(function () { $("cap-tip").style.opacity = 0; setTimeout(function () { $("cap-tip").classList.remove("show"); }, 450); }, 4000); }
+    $("cap-rail").classList.add("show");
     $("scan-hint").textContent = isExplore ? "Point at any photo from Explore" : "Point at the image";
     $("scan-hint").classList.add("show");
 
@@ -1177,7 +1184,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     document.querySelectorAll("video").forEach(function (v) {
       if (v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.remove(); }
     });
-    ["ar-close", "scan-hint", "unmute", "now-playing", "shutter", "cap-tip", "cap-view"].forEach(function (id) { $(id).classList.remove("show"); });
+    ["ar-close", "scan-hint", "unmute", "now-playing", "cap-rail", "cap-view"].forEach(function (id) { $(id).classList.remove("show"); });
     stopRec(true);
     $("splash").style.display = "";
     videos.forEach(function (v) { if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.remove(); } });
