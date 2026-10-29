@@ -307,7 +307,7 @@
   }
 
   // ── trimmer: cut a too-big video down and re-save it smaller, right on the phone ──
-  const MAX_LEN = 180;                                  // longest clip we'll make (seconds): a 3-minute song
+  const MAX_LEN = 240;                                  // longest clip we'll make (seconds): a 4-minute song
   const TARGET_BYTES = (C.MAX_VIDEO_MB - 1.5) * 1048576; // aim a little under the limit
   let trimFile = null, trimDur = 0;
   const fmt = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0");
@@ -383,11 +383,12 @@
         const left = Math.max(0, Math.round(len * (1 - p)));
         go.textContent = label + " " + Math.floor(p * 100) + "%" + (left > 5 ? " · about " + fmt(left) + " left" : "");
       };
-      let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len) - 128000);
+      const abps = len > 180 ? 96000 : 128000; // long songs: slightly lighter sound leaves room for the picture
+      let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len) - abps);
       let out = null;
       for (let tries = 0; tries < 3 && !out; tries++) {
         try {
-          out = await shrinkVideo(v, dest, a, b, bps, pct(tries ? "Shrinking more…" : "Shrinking…"), LIMIT);
+          out = await shrinkVideo(v, dest, a, b, bps, pct(tries ? "Shrinking more…" : "Shrinking…"), LIMIT, abps);
         } catch (e) {
           if (!e.projected) throw e;
           // this phone ignored the quality setting: we noticed early, so start again smaller
@@ -413,7 +414,7 @@
   };
 
   // plays the chosen part once, redrawing it smaller onto a canvas and recording the result
-  function shrinkVideo(v, dest, start, end, bps, onPct, limit) {
+  function shrinkVideo(v, dest, start, end, bps, onPct, limit, abps) {
     return new Promise((resolve, reject) => {
       const begin = () => {
         if (!v.videoWidth) return reject(new Error("This phone couldn't read that video."));
@@ -428,7 +429,7 @@
         const types = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1,mp4a", "video/mp4", "video/webm;codecs=vp8,opus", "video/webm"];
         const mime = types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
         let rec, stopped = false;
-        try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: Math.max(150000, bps), audioBitsPerSecond: 128000 }); }
+        try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: Math.max(150000, bps), audioBitsPerSecond: abps || 128000 }); }
         catch (e) { return reject(new Error("This browser can't shrink videos. Trim it in your Photos app instead.")); }
         const chunks = []; let bytes = 0, tooBig = 0;
         rec.ondataavailable = (e) => { if (e.data && e.data.size) { chunks.push(e.data); bytes += e.data.size; } };
