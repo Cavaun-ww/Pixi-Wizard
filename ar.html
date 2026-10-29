@@ -83,36 +83,8 @@ body.desktop #target-img { max-height:26vh; }
   padding:10px 18px; border-radius:100px; font-size:0.85rem; white-space:nowrap;
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); font-family:inherit;
 }
-#scan-hint { bottom:calc(28px + env(safe-area-inset-bottom)); }
-#unmute { bottom:calc(84px + env(safe-area-inset-bottom)); cursor:pointer; }
-/* ── capture: tap for a photo, hold for a video ── */
-/* side rail: photo + record, out of the way on the right edge */
-#cap-rail { display:none; position:fixed; right:12px; top:50%; transform:translateY(-50%); z-index:2000;
-  flex-direction:column; align-items:center; gap:10px; padding:8px; border-radius:999px;
-  background:rgba(12,8,28,.55); border:1px solid rgba(255,255,255,.18); box-shadow:0 8px 24px rgba(0,0,0,.25);
-  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
-#cap-rail.show { display:flex; }
-.cap-btn { position:relative; width:48px; height:48px; border-radius:50%; border:0; padding:0; cursor:pointer; display:grid; place-items:center;
-  background:rgba(255,255,255,.12); color:#fff; -webkit-tap-highlight-color:transparent; touch-action:manipulation; transition:transform .15s, background .2s; }
-.cap-btn:active { transform:scale(.9); }
-.cap-btn svg.ic { width:24px; height:24px; }
-#cap-rec .recdot { width:20px; height:20px; border-radius:50%; background:#ff3b5c; box-shadow:0 0 0 3px rgba(255,255,255,.9); transition:all .2s; }
-#cap-rec.on { background:rgba(255,59,92,.18); }
-#cap-rec.on .recdot { width:16px; height:16px; border-radius:4px; box-shadow:none; }
-#cap-rec svg.prog { position:absolute; inset:-3px; width:54px; height:54px; transform:rotate(-90deg); pointer-events:none; }
-#cap-rec svg.prog circle { fill:none; stroke:#ff3b5c; stroke-width:3; stroke-linecap:round; stroke-dasharray:157; stroke-dashoffset:157; }
-#cap-time { display:none; font-size:.72rem; font-weight:600; color:#fff; font-variant-numeric:tabular-nums; letter-spacing:.02em; margin-top:-4px; }
-#cap-rail.recording #cap-time { display:block; }
-#cap-rail.recording #cap-photo { opacity:.35; pointer-events:none; }
-.cap-flash { position:fixed; inset:0; background:#fff; opacity:.8; pointer-events:none; z-index:2500; transition:opacity .3s; }
-#cap-view { display:none; position:fixed; inset:0; z-index:3000; background:rgba(8,5,18,.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-  flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:20px 16px calc(20px + env(safe-area-inset-bottom)); }
-#cap-view.show { display:flex; }
-#cap-media { max-width:100%; max-height:calc(100vh - 170px); border-radius:18px; box-shadow:0 20px 50px rgba(0,0,0,.5); background:#000; }
-#cap-media img, #cap-media video { display:block; max-width:100%; max-height:calc(100vh - 170px); border-radius:18px; }
-.cap-actions { display:flex; gap:10px; width:100%; max-width:420px; }
-.cap-actions button { flex:1; padding:14px 10px; border-radius:999px; font:inherit; font-size:.95rem; font-weight:600; cursor:pointer; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); color:#fff; }
-.cap-actions .primary { border:0; background:linear-gradient(90deg,#ff5fd2,#a855f7 60%,#7c4dff); }
+#scan-hint { bottom:28px; }
+#unmute { bottom:84px; cursor:pointer; }
 #now-playing { top:18px; left:16px; transform:none; max-width:calc(100vw - 96px); display:none; align-items:center; gap:10px; padding:6px 16px 6px 6px; text-decoration:none; color:#fff; cursor:pointer; transition:opacity .3s; }
 #now-playing.show { display:flex; }
 #now-playing.fading { opacity:.55; }
@@ -267,19 +239,6 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
 <button id="ar-close" aria-label="Close camera">✕</button>
 <div class="pill-float" id="scan-hint">Point at the image</div>
 <button class="pill-float" id="unmute">🔇 Tap for sound</button>
-<div id="cap-rail">
-  <button type="button" class="cap-btn" id="cap-photo" aria-label="Take a photo"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.4-2h6.2L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
-  <button type="button" class="cap-btn" id="cap-rec" aria-label="Record a video"><span class="recdot"></span><svg class="prog" viewBox="0 0 54 54"><circle cx="27" cy="27" r="25"/></svg></button>
-  <span id="cap-time">0:00</span>
-</div>
-<div id="cap-view" role="dialog" aria-label="Your capture">
-  <div id="cap-media"></div>
-  <div class="cap-actions">
-    <button type="button" id="cap-close">Retake</button>
-    <button type="button" id="cap-save">Save</button>
-    <button type="button" class="primary" id="cap-share">Share</button>
-  </div>
-</div>
 <a class="pill-float" id="now-playing" href="#"></a>
 
 <script>
@@ -612,20 +571,15 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
         var group = slots[slot] || [idx];
         function mine() { return group[turn[slot] || 0] === idx; }
         if (!xp) return;
-        var self = this, video = null, built = false;
-        // Explore can hold dozens of posts: only load a post's video/GIF/photo once its picture is actually found,
-        // so the phone isn't swamped (iPhones go blank when too much loads at once)
-        function build() {
-        if (built) return; built = true;
         var photo = isPhoto(xp), gif = isGif(xp);
-        video = isVideo(xp) ? makeVideo(idx) : null;
+        var video = isVideo(xp) ? makeVideo(idx) : null;
         var imgA = xp.image_aspect || 1, vidA = xp.video_aspect || 16 / 9;
         var texture;
         if (gif) {
           var cv = document.createElement("canvas"); cv.width = cv.height = 2;
-          self.gif = new GifPlayer(pub(xp.video_path), cv);
+          this.gif = new GifPlayer(pub(xp.video_path), cv);
           texture = new THREE.CanvasTexture(cv);
-          self.gifTex = texture;
+          this.gifTex = texture;
         } else if (photo) {
           var loader = new THREE.TextureLoader();
           loader.setCrossOrigin("anonymous");
@@ -643,18 +597,15 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
         var geo = new THREE.PlaneGeometry(pw * pop, ph * pop);
         var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0, depthWrite: false });
         if (xp.key_mode === "green" || xp.key_mode === "black" || xp.key_mode === "white") applyKey(mat, xp.key_mode);
-        if (lift) self.el.object3D.position.z = 0.01 + lift;
-        self.lift = lift;
-        self.el.setObject3D("vid", new THREE.Mesh(geo, mat));
-        self.mat = mat;
-        }
+        if (lift) this.el.object3D.position.z = 0.01 + lift;
+        this.lift = lift;
+        this.el.setObject3D("vid", new THREE.Mesh(geo, mat));
+        this.mat = mat;
         this.visible = false;
-        if (!isExplore) build();
 
-        var targetEl = this.el.parentNode;
+        var self = this, targetEl = this.el.parentNode;
         targetEl.addEventListener("targetFound", function () {
           if (!mine()) { self.visible = false; return; } // someone else's turn on this picture
-          build();
           self.visible = true;
           currentIdx = idx;
           $("scan-hint").classList.remove("show");
@@ -925,231 +876,11 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     $("unmute").classList.remove("show");
   };
 
-
-  // ── capture: photos & videos of the AR view, made on the phone and saved to the phone (never uploaded) ──
-  var capPro = false;  // Pro viewers get captures without the pixiwizard.com mark
-  sb.auth.getSession().then(function (s) {
-    if (!s.data.session) return;
-    return sb.rpc("my_plan").then(function (r) { capPro = !!(r.data && r.data.is_pro); });
-  }).catch(function () {});
-  var markLogo = new Image(); markLogo.src = "logo-mark.png";
-  var capHook = null;         // runs right after each AR frame is drawn (the only moment the 3D layer can be copied)
-  var lastRender = 0;
-  // if AR frames aren't being drawn for some reason, still run the capture (camera only) so the buttons never do nothing
-  function runSoon(fn) {
-    capHook = fn;
-    setTimeout(function () { if (capHook === fn) { capHook = null; try { fn(); } catch (e) { console.warn(e); } } }, 500);
-  }
-  function hookRenderer(scene) {
-    var r = scene.renderer;
-    if (!r || r._pwHooked) return;
-    var orig = r.render.bind(r);
-    r.render = function (a, b) { orig(a, b); lastRender = performance.now(); if (capHook) { try { capHook(); } catch (e) { console.warn(e); } } };
-    r._pwHooked = true;
-  }
-  function camVideo() { return [].slice.call(document.querySelectorAll("video")).find(function (v) { return v.srcObject; }); }
-  // paint camera + AR + mark onto a canvas, matching what's on screen
-  function compose(ctx, W, H) {
-    var k = W / window.innerWidth;
-    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
-    var v = camVideo();
-    if (v && v.videoWidth) {
-      var r = v.getBoundingClientRect(), sc = Math.max(r.width / v.videoWidth, r.height / v.videoHeight);
-      var dw = v.videoWidth * sc, dh = v.videoHeight * sc;
-      ctx.drawImage(v, (r.left + (r.width - dw) / 2) * k, (r.top + (r.height - dh) / 2) * k, dw * k, dh * k);
-    }
-    var sceneEl = document.querySelector("a-scene");
-    if (sceneEl && sceneEl.canvas) {
-      var c = sceneEl.canvas, cr = c.getBoundingClientRect();
-      ctx.drawImage(c, cr.left * k, cr.top * k, cr.width * k, cr.height * k);
-    }
-    if (!capPro) drawMark(ctx, W, H);
-  }
-  function drawMark(ctx, W, H) {
-    var u = W / 390, fs = 13 * u, pad = 8 * u, logo = 18 * u, text = "pixiwizard.com";
-    ctx.save();
-    ctx.font = "600 " + fs + "px Outfit, system-ui, sans-serif";
-    var tw = ctx.measureText(text).width, bw = pad * 2.4 + logo + 6 * u + tw, bh = logo + pad * 1.4;
-    var x = W - bw - 14 * u, y = H - bh - 16 * u;
-    ctx.globalAlpha = 0.9; ctx.fillStyle = "rgba(10,6,24,.55)";
-    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, bw, bh, bh / 2); ctx.fill(); } else ctx.fillRect(x, y, bw, bh);
-    ctx.globalAlpha = 1;
-    if (markLogo.complete && markLogo.naturalWidth) ctx.drawImage(markLogo, x + pad * 1.2, y + (bh - logo) / 2, logo, logo);
-    ctx.fillStyle = "#fff"; ctx.textBaseline = "middle";
-    ctx.fillText(text, x + pad * 1.2 + logo + 6 * u, y + bh / 2 + u * 0.5);
-    ctx.restore();
-  }
-  function capCanvas(maxW) {
-    var w = Math.min(maxW, Math.round(window.innerWidth * Math.min(window.devicePixelRatio || 1, 3)));
-    w -= w % 2;
-    var h = Math.round(w * window.innerHeight / window.innerWidth); h -= h % 2;
-    var c = document.createElement("canvas"); c.width = w; c.height = h;
-    return c;
-  }
-
-  // ── photo ──
-  function takePhoto() {
-    var c = capCanvas(1440), ctx = c.getContext("2d");
-    runSoon(function () {
-      capHook = null;
-      compose(ctx, c.width, c.height);
-      // quick white flash, added only for a moment so nothing white ever sits over the camera
-      var fl = document.createElement("div"); fl.className = "cap-flash"; document.body.appendChild(fl);
-      requestAnimationFrame(function () { fl.style.opacity = 0; setTimeout(function () { fl.remove(); }, 350); });
-      c.toBlob(function (b) { c.width = c.height = 0; if (b) showCapture(b, "photo"); else toastMsg("Couldn't take the photo. Try again"); }, "image/jpeg", 0.92);
-    });
-  }
-
-  // ── video ──
-  var rec = null, recChunks = [], recTimer = null, recStart = 0, recAudio = null, MAX_REC = 30;
-  function overlaySound(dest) {
-    // route the playing overlay video's sound into the recording (it keeps playing out loud too)
-    var v = videos[currentIdx];
-    if (!v || v.muted) return;
-    try {
-      if (!v._pwSrc) { v._pwSrc = recAudio.ctx.createMediaElementSource(v); v._pwSrc.connect(recAudio.ctx.destination); }
-      v._pwSrc.connect(dest);
-    } catch (e) { /* no sound in the recording */ }
-  }
-  var recCanvas = null;
-  function startRec() {
-    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { toastMsg("This phone can't record videos here yet. Photos work"); return; }
-    var c = capCanvas(720), ctx = c.getContext("2d");
-    // iPhone only records a canvas that's actually on the page: keep it there, invisible
-    c.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1";
-    document.body.appendChild(c); recCanvas = c;
-    var last = 0;
-    compose(ctx, c.width, c.height);
-    capHook = function () { var t = performance.now(); if (t - last < 30) return; last = t; compose(ctx, c.width, c.height); };
-    var painting = true;
-    (function backup() { if (!painting) return; if (performance.now() - lastRender > 200) compose(ctx, c.width, c.height); requestAnimationFrame(backup); })();
-
-    var types = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp8,opus", "video/webm"];
-    var mime = types.find(function (t) { return MediaRecorder.isTypeSupported(t); }) || "";
-    function begin(withSound) {
-      var stream = c.captureStream(30);
-      if (withSound) {
-        try {
-          var dest = recAudio.ctx.createMediaStreamDestination();
-          overlaySound(dest);
-          dest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
-        } catch (e) {}
-      }
-      var r;
-      try { r = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4000000 } : { videoBitsPerSecond: 4000000 }); }
-      catch (e) { try { r = new MediaRecorder(stream); } catch (e2) { return null; } }
-      var chunks = [];
-      r.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
-      r.onerror = function () { console.warn("recorder error"); };
-      r._chunks = chunks; r._sound = withSound;
-      try { r.start(500); } catch (e) { return null; }
-      return r;
-    }
-    rec = begin(true) || begin(false);
-    if (!rec) { painting = false; capHook = null; c.remove(); toastMsg("This phone couldn't start recording. Photos work"); return; }
-    // some iPhones can't record the overlay's sound: if nothing comes out after a moment, quietly restart without it
-    setTimeout(function () {
-      if (!rec || !rec._sound) return;
-      if (rec.state === "recording" && rec._chunks.length) return; // it's working
-      var old = rec; old.onstop = null; try { old.stop(); } catch (e) {}
-      try { old.stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
-      var r2 = begin(false); if (r2) { r2.onstop = onStop; rec = r2; }
-    }, 1300);
-    function onStop() {
-      painting = false;
-      var r = this, type = ((r.mimeType || mime || "video/mp4").split(";")[0]) || "video/mp4";
-      var b = new Blob(r._chunks, { type: type });
-      try { r.stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
-      if (recCanvas) { recCanvas.remove(); recCanvas.width = recCanvas.height = 0; recCanvas = null; }
-      rec = null;
-      if (rec_cancel) return;
-      if (b.size) showCapture(b, "video");
-      else toastMsg("That recording didn't save. Try again");
-    }
-    rec.onstop = onStop;
-    rec_cancel = false;
-    recStart = Date.now();
-    $("cap-rec").classList.add("on"); $("cap-rail").classList.add("recording");
-    $("cap-rec").setAttribute("aria-label", "Stop recording");
-    var circle = $("cap-rec").querySelector("circle");
-    recTimer = setInterval(function () {
-      var secs = (Date.now() - recStart) / 1000, p = Math.min(1, secs / MAX_REC);
-      circle.style.strokeDashoffset = 157 * (1 - p);
-      $("cap-time").textContent = "0:" + String(Math.floor(secs)).padStart(2, "0");
-      if (p >= 1) stopRec();
-    }, 100);
-  }
-  var rec_cancel = false;
-  function stopRec(cancel) {
-    clearInterval(recTimer); recTimer = null;
-    $("cap-rec").classList.remove("on"); $("cap-rail").classList.remove("recording");
-    $("cap-rec").setAttribute("aria-label", "Record a video");
-    $("cap-rec").querySelector("circle").style.strokeDashoffset = 157;
-    $("cap-time").textContent = "0:00";
-    capHook = null;
-    if (rec && rec.state !== "inactive") { rec_cancel = !!cancel; try { rec.requestData && rec.requestData(); } catch (e) {} try { rec.stop(); } catch (e) {} }
-    else if (cancel && recCanvas) { recCanvas.remove(); recCanvas = null; }
-  }
-
-  // photo button / record button (tap to start, tap again to stop)
-  function audioOn() {
-    // sound for recordings has to be switched on inside the tap itself (iPhone rule)
-    try { if (!recAudio) { var AC = window.AudioContext || window.webkitAudioContext; recAudio = { ctx: new AC() }; } recAudio.ctx.resume(); } catch (err) {}
-  }
-  $("cap-photo").onclick = function () { if (!rec) takePhoto(); };
-  $("cap-rec").onclick = function () {
-    if (rec) { stopRec(); return; }
-    audioOn(); startRec();
-  };
-  $("cap-rail").addEventListener("contextmenu", function (e) { e.preventDefault(); });
-
-  // ── preview + save / share (stays on the phone) ──
-  var capFile = null, capUrl = null;
-  var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
-  function showCapture(blob, kind) {
-    if (capUrl) URL.revokeObjectURL(capUrl);
-    capUrl = URL.createObjectURL(blob);
-    var ext = kind === "photo" ? "jpg" : (/mp4/.test(blob.type) ? "mp4" : "webm");
-    var stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
-    capFile = new File([blob], "pixiwizard-" + stamp + "." + ext, { type: blob.type });
-    var m = $("cap-media");
-    m.innerHTML = "";
-    var el = document.createElement(kind === "photo" ? "img" : "video");
-    if (kind === "video") { el.controls = true; el.loop = true; el.playsInline = true; el.setAttribute("playsinline", ""); el.autoplay = true; }
-    el.src = capUrl; m.appendChild(el);
-    $("cap-save").textContent = kind === "photo" ? "Save photo" : "Save video";
-    $("cap-view").classList.add("show");
-  }
-  function download() {
-    var a = document.createElement("a"); a.href = capUrl; a.download = capFile.name;
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-  function shareIt() {
-    if (navigator.canShare && navigator.canShare({ files: [capFile] })) {
-      return navigator.share({ files: [capFile] }).catch(function () {});
-    }
-    download();
-  }
-  $("cap-share").onclick = shareIt;
-  // iPhone saves to Photos from the share sheet ("Save Image" / "Save Video"); other phones download it
-  $("cap-save").onclick = function () { if (isIOS) shareIt(); else { download(); toastMsg("Saved to your phone"); } };
-  $("cap-close").onclick = function () {
-    $("cap-view").classList.remove("show");
-    var v = $("cap-media").querySelector("video"); if (v) v.pause();
-  };
-
   // ── start / stop ────────────────────────────────────────────
   $("start-btn").onclick = function startAR() {
-    // opening the camera a second time on the same page: start fresh instead, so nothing piles up
-    if (arUsed) {
-      var u = new URL(location.href); u.searchParams.set("go", "1"); u.searchParams.delete("new");
-      location.replace(u.toString());
-      return;
-    }
     if (!xps.length || !mindSrc || !isMobile) return;
     $("splash").style.display = "none";
     $("ar-close").classList.add("show");
-    $("cap-rail").classList.add("show");
     $("scan-hint").textContent = isExplore ? "Point at any photo from Explore" : "Point at the image";
     $("scan-hint").classList.add("show");
 
@@ -1170,7 +901,6 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
           if (n.nodeType === 1 && n.tagName === "VIDEO" && videos.indexOf(n) === -1) {
             [["position","fixed"],["top","0"],["left","0"],["width","100vw"],["height","100vh"],["object-fit","cover"],["z-index","1"],["display","block"],["background","#000"]]
               .forEach(function (kv) { n.style.setProperty(kv[0], kv[1], "important"); });
-            kickCamera(n);
             camObserver.disconnect();
           }
         }
@@ -1217,7 +947,6 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     });
 
     scene.addEventListener("loaded", function () {
-      hookRenderer(scene);
       overlays.forEach(function (ov) { ov.setAttribute("video-overlay", "idx: " + ov.id.slice(7) + "; slot: " + ov.dataset.slot); });
     });
     scene.addEventListener("arError", function () {
@@ -1227,33 +956,16 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     document.body.appendChild(scene);
   };
 
-  // iPhones sometimes leave the camera blank (white) until something on screen changes;
-  // nudge it to repaint a few times once it starts, which is what tapping a button was doing
-  function kickCamera(v) {
-    var nudge = function () {
-      if (!v.isConnected) return;
-      if (v.paused) v.play().catch(function () {});
-      v.style.setProperty("transform", "translateZ(0)", "important");
-      requestAnimationFrame(function () { v.style.removeProperty("transform"); });
-    };
-    v.addEventListener("playing", function () { nudge(); setTimeout(nudge, 400); setTimeout(nudge, 1200); }, { once: true });
-    setTimeout(nudge, 2500); setTimeout(nudge, 5000);
-  }
-  var arUsed = false;
   function closeAR() {
     var sceneEl = document.querySelector("a-scene");
     if (sceneEl) {
-      arUsed = true;
       try { var sys = sceneEl.systems["mindar-image-system"]; if (sys) sys.stop(); } catch (e) {}
-      // hand the graphics memory back right away (iPhones only allow so much, then go blank)
-      try { sceneEl.renderer.dispose(); sceneEl.renderer.forceContextLoss(); } catch (e) {}
       sceneEl.parentNode.removeChild(sceneEl);
     }
     document.querySelectorAll("video").forEach(function (v) {
       if (v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.remove(); }
     });
-    ["ar-close", "scan-hint", "unmute", "now-playing", "cap-rail", "cap-view"].forEach(function (id) { $(id).classList.remove("show"); });
-    stopRec(true);
+    ["ar-close", "scan-hint", "unmute", "now-playing"].forEach(function (id) { $(id).classList.remove("show"); });
     $("splash").style.display = "";
     videos.forEach(function (v) { if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.remove(); } });
     videos = []; currentIdx = -1;
