@@ -91,7 +91,7 @@
         </div>
       </div>
       <div class="trim" id="trim" hidden>
-        <h4>✂️ Let's make your video fit</h4>
+        <h4>✂️ Let's get your video ready</h4>
         <p class="muted small" id="trim-why"></p>
         <video id="trim-vid" muted playsinline loop></video>
         <div class="rng"><span>Start</span><input type="range" id="trim-start" min="0" step="0.1" value="0"><span id="trim-start-t">0:00</span></div>
@@ -99,7 +99,7 @@
         <div class="est muted" id="trim-est"></div>
         <div class="trim-keep" id="trim-keep" hidden>📱 Keep this screen open while it shrinks. It takes about as long as the clip.</div>
         <div class="row">
-          <button class="btn btn-primary" id="trim-go" type="button">✨ Make it fit</button>
+          <button class="btn btn-primary" id="trim-go" type="button">✨ Get it ready</button>
           <button class="btn btn-ghost" id="trim-cancel" type="button">Cancel</button>
         </div>
       </div>
@@ -323,7 +323,7 @@
     tv.onloadedmetadata = () => {
       trimDur = isFinite(tv.duration) ? tv.duration : 0;
       if (!trimDur) { $("trim").hidden = true; return App.toast("That video couldn't be read. Try an MP4.", true); }
-      $("trim-why").textContent = "This video is a little too big to upload. Pick the part you want (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll make it fit.";
+      $("trim-why").textContent = "Pick the part you want to use (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll get it ready for AR.";
       ["trim-start", "trim-end"].forEach((id) => ($(id).max = trimDur.toFixed(1)));
       $("trim-start").value = 0;
       $("trim-end").value = Math.min(trimDur, MAX_LEN).toFixed(1);
@@ -331,7 +331,7 @@
       tv.play().catch(() => {});
     };
     $("trim").hidden = false;
-    $("trim-go").disabled = false; $("trim-go").textContent = "✨ Make it fit"; $("trim-keep").hidden = true;
+    $("trim-go").disabled = false; $("trim-go").textContent = "✨ Get it ready"; $("trim-keep").hidden = true;
     setTimeout(() => $("trim").scrollIntoView({ behavior: "smooth", block: "center" }), 150);
   }
   function trimUpdate(moved) {
@@ -394,7 +394,7 @@
           bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / e.projected));
         }
       }
-      if (!out || out.size > LIMIT) throw new Error("Still a little too big. Pick a shorter part and try again.");
+      if (!out || out.size > LIMIT) throw new Error("That part didn't work. Pick a shorter part and try again.");
       $("trim").hidden = true;
       trimFile = null;
       useVideo(out);
@@ -402,7 +402,7 @@
     } catch (e) {
       App.toast(e.message || "Couldn't shrink that video. Try trimming it in your Photos app.", true);
     } finally {
-      go.textContent = "✨ Make it fit";
+      go.textContent = "✨ Get it ready";
       go.disabled = false; $("trim-cancel").disabled = false;
       $("trim-keep").hidden = true;
       if (lock) lock.release().catch(() => {});
