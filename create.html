@@ -87,7 +87,7 @@
         <div class="empty-state">
           <div class="icon"><img class="drop-art" src="icon-video.png" alt=""></div>
           <div>Drop a video, GIF or photo here or <span class="browse">browse</span></div>
-          <div class="hint">MP4 · WebM · GIF · JPG · PNG — videos and GIFs under <span class="js-maxvid"></span> MB. Bigger video? We'll shrink it for you.</div>
+          <div class="hint">Videos up to 3 minutes. Too big? We'll shrink it for you.</div>
         </div>
       </div>
       <div class="trim" id="trim" hidden>
@@ -244,7 +244,7 @@
   }
   async function prepareImage(file) {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Please choose a JPG, PNG or WebP image.");
-    if (file.size > C.MAX_IMAGE_MB * 1048576) throw new Error("Image is over " + C.MAX_IMAGE_MB + " MB.");
+    if (file.size > C.MAX_IMAGE_MB * 1048576) throw new Error("That photo is too big. Try a smaller one, or a screenshot of it.");
     const src = await loadImage(file);
     const MAX = 1024, s = Math.min(1, MAX / Math.max(src.naturalWidth, src.naturalHeight));
     const w = Math.round(src.naturalWidth * s), h = Math.round(src.naturalHeight * s);
@@ -274,13 +274,13 @@
     // a photo or animated GIF as the overlay (PNG/GIF with a transparent background floats like a sticker)
     const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
     if (isGif || /^image\/(jpeg|png|webp)$/.test(file.type)) {
-      if (isGif && file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("GIF is over " + C.MAX_VIDEO_MB + " MB. Try a shorter or smaller GIF.", true);
-      if (!isGif && file.size > C.MAX_IMAGE_MB * 1048576) return App.toast("Photo is over " + C.MAX_IMAGE_MB + " MB.", true);
+      if (isGif && file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("That GIF is too big. Try a shorter one.", true);
+      if (!isGif && file.size > C.MAX_IMAGE_MB * 1048576) return App.toast("That photo is too big. Try a smaller one, or a screenshot of it.", true);
       const im = new Image();
       im.onload = () => {
         vid = { file, w: im.naturalWidth || 1, h: im.naturalHeight || 1, kind: "image", gif: isGif };
         const p = new Image(); p.src = im.src;
-        showPreview("drop-vid", p, (isGif ? "GIF · " : "Photo · ") + (file.size / 1048576).toFixed(1) + " MB");
+        showPreview("drop-vid", p, isGif ? "GIF" : "Photo");
         done();
       };
       im.onerror = () => App.toast(isGif ? "That GIF couldn't be read." : "That photo couldn't be read.", true);
@@ -299,7 +299,7 @@
     v.setAttribute("playsinline", "");
     v.onloadedmetadata = () => {
       vid = { file, w: v.videoWidth || 16, h: v.videoHeight || 9, kind: "video" };
-      showPreview("drop-vid", v, (file.size / 1048576).toFixed(1) + " MB · " + Math.round(v.duration || 0) + "s");
+      showPreview("drop-vid", v, "Video · " + fmt(v.duration || 0));
       done();
     };
     v.onerror = () => App.toast("This browser can't play that video. MP4 (H.264) works everywhere.", true);
@@ -316,14 +316,14 @@
   }
   function openTrimmer(file) {
     const mb = (file.size / 1048576).toFixed(0);
-    if (!canShrink()) return App.toast("Video is over " + C.MAX_VIDEO_MB + " MB. Trim it in your Photos app, then try again.", true);
+    if (!canShrink()) return App.toast("This video is too big. Trim it shorter in your Photos app, then try again.", true);
     trimFile = file;
     const tv = $("trim-vid");
     tv.src = URL.createObjectURL(file);
     tv.onloadedmetadata = () => {
       trimDur = isFinite(tv.duration) ? tv.duration : 0;
       if (!trimDur) { $("trim").hidden = true; return App.toast("That video couldn't be read. Try an MP4.", true); }
-      $("trim-why").textContent = "This video is " + mb + " MB and the limit is " + C.MAX_VIDEO_MB + " MB. Pick the part you want (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll shrink it to fit.";
+      $("trim-why").textContent = "This video is a little too big to upload. Pick the part you want (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll make it fit.";
       ["trim-start", "trim-end"].forEach((id) => ($(id).max = trimDur.toFixed(1)));
       $("trim-start").value = 0;
       $("trim-end").value = Math.min(trimDur, MAX_LEN).toFixed(1);
@@ -340,7 +340,7 @@
     if (b - a > MAX_LEN) { if (moved === "start") b = a + MAX_LEN; else a = b - MAX_LEN; }
     $("trim-start").value = a; $("trim-end").value = b;
     $("trim-start-t").textContent = fmt(a); $("trim-end-t").textContent = fmt(b);
-    $("trim-est").textContent = "Clip length " + fmt(b - a) + " · will be under " + C.MAX_VIDEO_MB + " MB";
+    $("trim-est").textContent = "Clip length " + fmt(b - a);
     const tv = $("trim-vid");
     if (tv.readyState) tv.currentTime = moved === "start" ? a : Math.max(a, b - 1.5);
   }
@@ -394,11 +394,11 @@
           bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / e.projected));
         }
       }
-      if (!out || out.size > LIMIT) throw new Error("Still too big. Pick a shorter part and try again.");
+      if (!out || out.size > LIMIT) throw new Error("Still a little too big. Pick a shorter part and try again.");
       $("trim").hidden = true;
       trimFile = null;
       useVideo(out);
-      App.toast("✨ Ready: " + fmt(len) + " at " + (out.size / 1048576).toFixed(1) + " MB");
+      App.toast("✨ Your " + fmt(len) + " clip is ready");
     } catch (e) {
       App.toast(e.message || "Couldn't shrink that video. Try trimming it in your Photos app.", true);
     } finally {

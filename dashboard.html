@@ -251,7 +251,7 @@
   $("bg-file").onchange = async () => {
     const f = $("bg-file").files[0]; $("bg-file").value = "";
     if (!f) return;
-    if (f.size > 20 * 1048576) return App.toast("That photo is too large (max 20 MB).", true);
+    if (f.size > 20 * 1048576) return App.toast("That photo is too big. Try a smaller one.", true);
     $("bg-photo-btn").disabled = true; $("bg-photo-btn").textContent = "Uploading…";
     try {
       const blob = await new Promise((res, rej) => {
@@ -292,7 +292,7 @@
     const f = $("avatar-file").files[0];
     $("avatar-file").value = "";
     if (!f) return;
-    if (f.size > 15 * 1048576) return App.toast("That photo is too large (max 15 MB).", true);
+    if (f.size > 15 * 1048576) return App.toast("That photo is too big. Try a smaller one.", true);
     $("avatar-btn").disabled = true; $("avatar-btn").textContent = "Uploading…";
     try {
       const blob = await App.squareJpeg(f, 400);

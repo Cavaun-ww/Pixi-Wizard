@@ -291,7 +291,7 @@
   function shrinkPhoto(file) {
     return new Promise((resolve, reject) => {
       if (file.type === "image/gif") { // keep GIFs animated
-        if (file.size > 10 * 1048576) return reject(new Error("That GIF is over 10 MB."));
+        if (file.size > 10 * 1048576) return reject(new Error("That GIF is too big. Try a shorter one."));
         return resolve({ blob: file, type: "image/gif", ext: "gif" });
       }
       const img = new Image();
