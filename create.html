@@ -314,10 +314,30 @@
   function canShrink() {
     return !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
   }
+  // a new video replaces whatever overlay was there before, so the old one never lingers
+  function clearOverlay(file) {
+    vid = null;
+    const drop = $("drop-vid");
+    drop.querySelectorAll(".preview,.file-meta").forEach((n) => n.remove());
+    $("n2").classList.remove("done"); $("n2").textContent = "2";
+    if (file) {
+      const v = document.createElement("video");
+      v.muted = true; v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "metadata";
+      v.src = URL.createObjectURL(file) + "#t=0.1"; // shows the first frame
+      v.className = "preview";
+      const m = document.createElement("div"); m.className = "file-meta"; m.textContent = "Pick the part below ↓";
+      drop.classList.add("has-file"); drop.querySelector(".empty-state").hidden = true;
+      drop.append(v, m);
+    } else {
+      drop.classList.remove("has-file"); drop.querySelector(".empty-state").hidden = false;
+    }
+    refresh();
+  }
   function openTrimmer(file) {
     const mb = (file.size / 1048576).toFixed(0);
     if (!canShrink()) return App.toast("This video is too big. Trim it shorter in your Photos app, then try again.", true);
     trimFile = file;
+    clearOverlay(file);
     const tv = $("trim-vid");
     tv.src = URL.createObjectURL(file);
     tv.onloadedmetadata = () => {
@@ -351,7 +371,7 @@
     const a = +$("trim-start").value, b = +$("trim-end").value;
     if (this.currentTime >= b || this.currentTime < a - 0.3) this.currentTime = a; // loop the chosen part
   });
-  $("trim-cancel").onclick = () => { $("trim").hidden = true; $("trim-vid").pause(); trimFile = null; $("file-vid").value = ""; };
+  $("trim-cancel").onclick = () => { $("trim").hidden = true; $("trim-vid").pause(); trimFile = null; $("file-vid").value = ""; clearOverlay(null); };
 
   $("trim-go").onclick = async () => {
     if (!trimFile) return;
