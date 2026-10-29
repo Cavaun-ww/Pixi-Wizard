@@ -266,8 +266,9 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   $("site-name").innerHTML = C.SITE_NAME.replace(/[&<>]/g, "").split(" ").map(function (w, i) { return i ? w : w.replace(/i/g, '<span class="dia-i">\u0131</span>'); }).join(" ");
   document.querySelectorAll(".js-name").forEach(function (e) { e.textContent = C.SITE_NAME; });
   function setStatus(msg, cls) { var el = $("status-line"); el.textContent = msg; el.className = cls || ""; }
+  var TEMPLATE_V = 3; // bump when a template video is replaced, so phones fetch the new one
   function pub(path) {
-    if (/^templates\//.test(path || "")) return new URL(path, location.href).href; // ready-made overlay hosted with the site
+    if (/^templates\//.test(path || "")) return new URL(path + "?v=" + TEMPLATE_V, location.href).href; // ready-made overlay hosted with the site
     return sb.storage.from("ar").getPublicUrl(path).data.publicUrl;
   }
   function shareUrl() { return location.origin + location.pathname + (isExplore ? "?explore=1" : "?x=" + encodeURIComponent(slug)); }
@@ -458,7 +459,10 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
         "  diffuseColor.a *= smoothstep(0.05, 0.18, l);" +
         "  if (diffuseColor.a < 0.02) discard; }";
     mat.onBeforeCompile = function (sh) {
-      sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n" + glsl);
+      // also hide a thin border: green-screen clips often have a stray line along an edge
+      var uv = sh.fragmentShader.indexOf("vMapUv") !== -1 ? "vMapUv" : "vUv";
+      var edge = "{ vec2 e = min(" + uv + ", 1.0 - " + uv + "); diffuseColor.a *= smoothstep(0.004, 0.015, min(e.x, e.y)); if (diffuseColor.a < 0.02) discard; }";
+      sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n" + glsl + "\n" + edge);
     };
     mat.customProgramCacheKey = function () { return "pwkey-" + mode; };
     mat.needsUpdate = true;
