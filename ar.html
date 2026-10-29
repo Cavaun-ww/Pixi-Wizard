@@ -922,7 +922,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     scene.setAttribute("mindar-image",
       "imageTargetSrc: " + mindSrc +
       "; maxTrack: 1; uiLoading: no; uiScanning: no; uiError: no" +
-      "; filterMinCF: 0.001; filterBeta: 10; warmupTolerance: 2; missTolerance: 5");
+      "; filterMinCF: 0.001; filterBeta: 0.05; warmupTolerance: 2; missTolerance: 5");
     scene.setAttribute("vr-mode-ui", "enabled: false");
     scene.setAttribute("device-orientation-permission-ui", "enabled: false");
     scene.setAttribute("renderer", "colorManagement: true; alpha: true;");
