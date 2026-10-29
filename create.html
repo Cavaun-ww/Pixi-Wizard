@@ -269,7 +269,7 @@
   });
 
   wireDrop("drop-vid", "file-vid", (file) => {
-    $("trim").hidden = true; $("trim-vid").pause();
+    $("trim").hidden = true; $("trim-vid").pause(); trimFile = null;
     const done = (meta) => { $("n2").classList.add("done"); $("n2").textContent = "✓"; refresh(); };
     // a photo or animated GIF as the overlay (PNG/GIF with a transparent background floats like a sticker)
     const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
@@ -321,13 +321,20 @@
     drop.querySelectorAll(".preview,.file-meta").forEach((n) => n.remove());
     $("n2").classList.remove("done"); $("n2").textContent = "2";
     if (file) {
-      const v = document.createElement("video");
-      v.muted = true; v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "metadata";
-      v.src = URL.createObjectURL(file) + "#t=0.1"; // shows the first frame
-      v.className = "preview";
+      // a still picture of the new video, copied from the player below once it shows a frame (works on iPhone)
+      const cv = document.createElement("canvas"); cv.className = "preview"; cv.width = 16; cv.height = 9;
+      const tv = $("trim-vid");
+      const snap = () => {
+        if (tv.readyState < 2 || !tv.videoWidth) return;
+        tv.removeEventListener("timeupdate", snap); tv.removeEventListener("loadeddata", snap);
+        const k = Math.min(1, 640 / Math.max(tv.videoWidth, tv.videoHeight));
+        cv.width = Math.round(tv.videoWidth * k); cv.height = Math.round(tv.videoHeight * k);
+        try { cv.getContext("2d").drawImage(tv, 0, 0, cv.width, cv.height); } catch (_) {}
+      };
+      tv.addEventListener("timeupdate", snap); tv.addEventListener("loadeddata", snap);
       const m = document.createElement("div"); m.className = "file-meta"; m.textContent = "Pick the part below ↓";
       drop.classList.add("has-file"); drop.querySelector(".empty-state").hidden = true;
-      drop.append(v, m);
+      drop.append(cv, m);
     } else {
       drop.classList.remove("has-file"); drop.querySelector(".empty-state").hidden = false;
     }
@@ -515,6 +522,8 @@
   function refresh() { $("publish").disabled = busy; }
   function missing() {
     if (!img) return ["Add your photo first (step 1).", "drop-img"];
+    if (!vid && trimFile && $("trim-go").disabled) return ["Your video is still getting ready. Hang tight, almost there.", "trim"];
+    if (!vid && trimFile) return ["Tap \u201cGet it ready\u201d to finish your video first.", "trim-go"];
     if (!vid) return ["Add your video, GIF or photo (step 2).", "drop-vid"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
     if (!handle) return ["Your page name isn't ready yet. Refresh the page and try again.", "title"];
