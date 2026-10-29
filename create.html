@@ -291,7 +291,7 @@
     { id: "its-a-girl", name: "It's a Girl!", w: 1280, h: 720, key: "none" },
   ];
   $("tpl-row").innerHTML = TEMPLATES.map((t) =>
-    '<button type="button" class="tpl" data-id="' + t.id + '"><img loading="lazy" alt="" src="templates/' + t.id + '.jpg"><span>' + t.name + "</span></button>").join("");
+    '<button type="button" class="tpl" data-id="' + t.id + '"><img loading="lazy" alt="" src="templates/' + t.id + '.jpg?v=2"><span>' + t.name + "</span></button>").join("");
   function markTemplate(id) { $("tpl-row").querySelectorAll(".tpl").forEach((b) => b.classList.toggle("on", b.dataset.id === id)); }
   $("tpl-row").addEventListener("click", (e) => {
     const b = e.target.closest(".tpl"); if (!b) return;
@@ -299,7 +299,7 @@
     $("trim").hidden = true; $("trim-vid").pause(); trimFile = null; $("file-vid").value = "";
     markTemplate(t.id);
     vid = { template: "templates/" + t.id + ".mp4", w: t.w, h: t.h, kind: "video", name: t.name };
-    const p = new Image(); p.alt = ""; p.src = "templates/" + t.id + ".jpg"; // shows it the way it looks in AR
+    const p = new Image(); p.alt = ""; p.src = "templates/" + t.id + ".jpg?v=2"; // shows it the way it looks in AR
     showPreview("drop-vid", p, "Template · " + t.name);
     // green-screen templates float on the photo: switch on green removal for them
     const k = $("fx").querySelector('#fx-key [data-k="' + t.key + '"]'); if (k) k.click();
