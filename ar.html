@@ -613,15 +613,20 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
         var group = slots[slot] || [idx];
         function mine() { return group[turn[slot] || 0] === idx; }
         if (!xp) return;
+        var self = this, video = null, built = false;
+        // Explore can hold dozens of posts: only load a post's video/GIF/photo once its picture is actually found,
+        // so the phone isn't swamped (iPhones go blank when too much loads at once)
+        function build() {
+        if (built) return; built = true;
         var photo = isPhoto(xp), gif = isGif(xp);
-        var video = isVideo(xp) ? makeVideo(idx) : null;
+        video = isVideo(xp) ? makeVideo(idx) : null;
         var imgA = xp.image_aspect || 1, vidA = xp.video_aspect || 16 / 9;
         var texture;
         if (gif) {
           var cv = document.createElement("canvas"); cv.width = cv.height = 2;
-          this.gif = new GifPlayer(pub(xp.video_path), cv);
+          self.gif = new GifPlayer(pub(xp.video_path), cv);
           texture = new THREE.CanvasTexture(cv);
-          this.gifTex = texture;
+          self.gifTex = texture;
         } else if (photo) {
           var loader = new THREE.TextureLoader();
           loader.setCrossOrigin("anonymous");
@@ -639,15 +644,18 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
         var geo = new THREE.PlaneGeometry(pw * pop, ph * pop);
         var mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, opacity: 0, depthWrite: false });
         if (xp.key_mode === "green" || xp.key_mode === "black" || xp.key_mode === "white") applyKey(mat, xp.key_mode);
-        if (lift) this.el.object3D.position.z = 0.01 + lift;
-        this.lift = lift;
-        this.el.setObject3D("vid", new THREE.Mesh(geo, mat));
-        this.mat = mat;
+        if (lift) self.el.object3D.position.z = 0.01 + lift;
+        self.lift = lift;
+        self.el.setObject3D("vid", new THREE.Mesh(geo, mat));
+        self.mat = mat;
+        }
         this.visible = false;
+        if (!isExplore) build();
 
-        var self = this, targetEl = this.el.parentNode;
+        var targetEl = this.el.parentNode;
         targetEl.addEventListener("targetFound", function () {
           if (!mine()) { self.visible = false; return; } // someone else's turn on this picture
+          build();
           self.visible = true;
           currentIdx = idx;
           $("scan-hint").classList.remove("show");
@@ -927,11 +935,17 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   }).catch(function () {});
   var markLogo = new Image(); markLogo.src = "logo-mark.png";
   var capHook = null;         // runs right after each AR frame is drawn (the only moment the 3D layer can be copied)
+  var lastRender = 0;
+  // if AR frames aren't being drawn for some reason, still run the capture (camera only) so the buttons never do nothing
+  function runSoon(fn) {
+    capHook = fn;
+    setTimeout(function () { if (capHook === fn) { capHook = null; try { fn(); } catch (e) { console.warn(e); } } }, 500);
+  }
   function hookRenderer(scene) {
     var r = scene.renderer;
     if (!r || r._pwHooked) return;
     var orig = r.render.bind(r);
-    r.render = function (a, b) { orig(a, b); if (capHook) { try { capHook(); } catch (e) { console.warn(e); } } };
+    r.render = function (a, b) { orig(a, b); lastRender = performance.now(); if (capHook) { try { capHook(); } catch (e) { console.warn(e); } } };
     r._pwHooked = true;
   }
   function camVideo() { return [].slice.call(document.querySelectorAll("video")).find(function (v) { return v.srcObject; }); }
@@ -977,14 +991,14 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   // ── photo ──
   function takePhoto() {
     var c = capCanvas(1440), ctx = c.getContext("2d");
-    capHook = function () {
+    runSoon(function () {
       capHook = null;
       compose(ctx, c.width, c.height);
       // quick white flash, added only for a moment so nothing white ever sits over the camera
       var fl = document.createElement("div"); fl.className = "cap-flash"; document.body.appendChild(fl);
       requestAnimationFrame(function () { fl.style.opacity = 0; setTimeout(function () { fl.remove(); }, 350); });
-      c.toBlob(function (b) { if (b) showCapture(b, "photo"); }, "image/jpeg", 0.92);
-    };
+      c.toBlob(function (b) { if (b) showCapture(b, "photo"); else toastMsg("Couldn't take the photo. Try again"); }, "image/jpeg", 0.92);
+    });
   }
 
   // ── video ──
@@ -1022,6 +1036,8 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     var last = 0;
     compose(ctx, c.width, c.height);
     capHook = function () { var t = performance.now(); if (t - last < 30) return; last = t; compose(ctx, c.width, c.height); };
+    // backup painter in case AR frames stall, so the video still records
+    (function backup() { if (!rec) return; if (performance.now() - lastRender > 200) compose(ctx, c.width, c.height); requestAnimationFrame(backup); })();
     rec_cancel = false;
     rec.start(500);
     recStart = Date.now();
