@@ -21,7 +21,8 @@
   .tpl { scroll-snap-align: start; border: 1px solid var(--line); background: #160e2a; border-radius: 14px; padding: 0; overflow: hidden; cursor: pointer; text-align: left; color: inherit; font: inherit; }
   .tpl img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #1d1538; }
   .tpl span { display: block; padding: 7px 9px 8px; font-size: .8rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tpl.on { border-color: var(--pink); box-shadow: 0 0 0 2px var(--pink); }
+  .tpl { -webkit-tap-highlight-color: transparent; position: relative; }
+  .tpl.on::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 3px solid var(--pink); pointer-events: none; }
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
   .trim video { width: 100%; max-height: 300px; border-radius: 12px; background: #000; margin: 12px 0; display: block; object-fit: contain; }
