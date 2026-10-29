@@ -85,6 +85,7 @@ body.desktop #target-img { max-height:26vh; }
 }
 #scan-hint { bottom:28px; }
 #unmute { bottom:84px; cursor:pointer; }
+#loading-pill { top:50%; transform:translate(-50%,-50%); pointer-events:none; }
 #now-playing { top:18px; left:16px; transform:none; max-width:calc(100vw - 96px); display:none; align-items:center; gap:10px; padding:6px 16px 6px 6px; text-decoration:none; color:#fff; cursor:pointer; transition:opacity .3s; }
 #now-playing.show { display:flex; }
 #now-playing.fading { opacity:.55; }
@@ -239,6 +240,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
 <button id="ar-close" aria-label="Close camera">✕</button>
 <div class="pill-float" id="scan-hint">Point at the image</div>
 <button class="pill-float" id="unmute">🔇 Tap for sound</button>
+<div class="pill-float" id="loading-pill">✨ Found it! Loading…</div>
 <a class="pill-float" id="now-playing" href="#"></a>
 
 <script>
@@ -614,6 +616,13 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
           if (!video) return; // photo or GIF overlay: no sound to start
           if (fresh && group.length > 1) { try { video.currentTime = 0; } catch (e) {} }
           video._wanted = true;
+          // the picture is found but the video is still downloading: say so, so it doesn't feel stuck
+          if (video.readyState < 3) {
+            $("loading-pill").classList.add("show");
+            var done = function () { $("loading-pill").classList.remove("show"); };
+            video.addEventListener("playing", done, { once: true });
+            video.addEventListener("canplay", done, { once: true });
+          }
           video.play().catch(function () {
             // sound blocked by the browser → play muted and offer a tap-for-sound button
             video.muted = true;
@@ -625,6 +634,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
           var wasOn = self.visible;
           self.visible = false;
           if (video) { video._wanted = false; video.pause(); }
+          $("loading-pill").classList.remove("show");
           if (!wasOn) return;
           if (currentIdx === idx) fadeCreator();
           $("scan-hint").classList.add("show");
@@ -912,7 +922,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     scene.setAttribute("mindar-image",
       "imageTargetSrc: " + mindSrc +
       "; maxTrack: 1; uiLoading: no; uiScanning: no; uiError: no" +
-      "; filterMinCF: 0.001; filterBeta: 0.001; warmupTolerance: 5; missTolerance: 5");
+      "; filterMinCF: 0.001; filterBeta: 10; warmupTolerance: 2; missTolerance: 5");
     scene.setAttribute("vr-mode-ui", "enabled: false");
     scene.setAttribute("device-orientation-permission-ui", "enabled: false");
     scene.setAttribute("renderer", "colorManagement: true; alpha: true;");
@@ -965,7 +975,7 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     document.querySelectorAll("video").forEach(function (v) {
       if (v.srcObject) { v.srcObject.getTracks().forEach(function (t) { t.stop(); }); v.remove(); }
     });
-    ["ar-close", "scan-hint", "unmute", "now-playing"].forEach(function (id) { $(id).classList.remove("show"); });
+    ["ar-close", "scan-hint", "unmute", "now-playing", "loading-pill"].forEach(function (id) { $(id).classList.remove("show"); });
     $("splash").style.display = "";
     videos.forEach(function (v) { if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.remove(); } });
     videos = []; currentIdx = -1;
