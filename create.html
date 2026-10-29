@@ -87,7 +87,7 @@
         <div class="empty-state">
           <div class="icon"><img class="drop-art" src="icon-video.png" alt=""></div>
           <div>Drop a video, GIF or photo here or <span class="browse">browse</span></div>
-          <div class="hint">Videos up to 3 minutes. Too big? We'll shrink it for you.</div>
+          <div class="hint">Too big? We'll shrink it for you.</div>
         </div>
       </div>
       <div class="trim" id="trim" hidden>
@@ -323,7 +323,7 @@
     tv.onloadedmetadata = () => {
       trimDur = isFinite(tv.duration) ? tv.duration : 0;
       if (!trimDur) { $("trim").hidden = true; return App.toast("That video couldn't be read. Try an MP4.", true); }
-      $("trim-why").textContent = "Pick the part you want to use (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll get it ready for AR.";
+      $("trim-why").textContent = "Pick the part you want to use and we'll get it ready for AR.";
       ["trim-start", "trim-end"].forEach((id) => ($(id).max = trimDur.toFixed(1)));
       $("trim-start").value = 0;
       $("trim-end").value = Math.min(trimDur, MAX_LEN).toFixed(1);
