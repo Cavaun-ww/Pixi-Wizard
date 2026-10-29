@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261028-1">
+<link rel="stylesheet" href="styles.css?v=20261028-2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261028-1"></script>
-<script src="app.js?v=20261028-1"></script>
-<script src="icons.js?v=20261028-1" defer></script>
+<script src="config.js?v=20261028-2"></script>
+<script src="app.js?v=20261028-2"></script>
+<script src="icons.js?v=20261028-2" defer></script>
 <style>
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
@@ -24,6 +24,8 @@
   .trim .est { margin: 10px 0 14px; font-size: .9rem; }
   .trim .est.bad { color: #ff8a8a; }
   .trim .row { gap: 10px; flex-wrap: wrap; }
+  #trim-go:disabled { opacity: 1; filter: none; cursor: progress; }
+  .trim-keep { margin: -4px 0 14px; padding: 10px 12px; border-radius: 12px; background: rgba(168,85,247,.14); border: 1px solid rgba(168,85,247,.35); font-size: .88rem; }
   .priv-box { margin: 4px 0 16px; }
   .priv-box summary .small { margin-left: 6px; font-weight: 400; }
   .priv-inner { margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -85,7 +87,7 @@
         <div class="empty-state">
           <div class="icon"><img class="drop-art" src="icon-video.png" alt=""></div>
           <div>Drop a video, GIF or photo here or <span class="browse">browse</span></div>
-          <div class="hint">MP4 · WebM · GIF · JPG · PNG — videos and GIFs under <span class="js-maxvid"></span> MB. Bigger video? We'll help you trim it.</div>
+          <div class="hint">MP4 · WebM · GIF · JPG · PNG — videos and GIFs under <span class="js-maxvid"></span> MB. Bigger video or a song up to 3 minutes? We'll shrink it for you.</div>
         </div>
       </div>
       <div class="trim" id="trim" hidden>
@@ -95,8 +97,9 @@
         <div class="rng"><span>Start</span><input type="range" id="trim-start" min="0" step="0.1" value="0"><span id="trim-start-t">0:00</span></div>
         <div class="rng"><span>End</span><input type="range" id="trim-end" min="0" step="0.1" value="0"><span id="trim-end-t">0:00</span></div>
         <div class="est muted" id="trim-est"></div>
+        <div class="trim-keep" id="trim-keep" hidden>📱 Keep this screen open while it shrinks. It takes about as long as the clip.</div>
         <div class="row">
-          <button class="btn btn-primary" id="trim-go" type="button">✂️ Trim &amp; use this part</button>
+          <button class="btn btn-primary" id="trim-go" type="button">✨ Make it fit</button>
           <button class="btn btn-ghost" id="trim-cancel" type="button">Cancel</button>
         </div>
       </div>
@@ -304,7 +307,7 @@
   }
 
   // ── trimmer: cut a too-big video down and re-save it smaller, right on the phone ──
-  const MAX_LEN = 60;                                   // longest clip we'll make (seconds)
+  const MAX_LEN = 180;                                  // longest clip we'll make (seconds): a 3-minute song
   const TARGET_BYTES = (C.MAX_VIDEO_MB - 1.5) * 1048576; // aim a little under the limit
   let trimFile = null, trimDur = 0;
   const fmt = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0");
@@ -320,15 +323,15 @@
     tv.onloadedmetadata = () => {
       trimDur = isFinite(tv.duration) ? tv.duration : 0;
       if (!trimDur) { $("trim").hidden = true; return App.toast("That video couldn't be read. Try an MP4.", true); }
-      $("trim-why").textContent = "This video is " + mb + " MB and the limit is " + C.MAX_VIDEO_MB + " MB. Pick the part you want (up to " + MAX_LEN + " seconds) and we'll shrink it for you.";
+      $("trim-why").textContent = "This video is " + mb + " MB and the limit is " + C.MAX_VIDEO_MB + " MB. Pick the part you want (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll shrink it to fit.";
       ["trim-start", "trim-end"].forEach((id) => ($(id).max = trimDur.toFixed(1)));
       $("trim-start").value = 0;
-      $("trim-end").value = Math.min(trimDur, 20).toFixed(1);
+      $("trim-end").value = Math.min(trimDur, MAX_LEN).toFixed(1);
       trimUpdate("end");
       tv.play().catch(() => {});
     };
     $("trim").hidden = false;
-    $("trim-go").disabled = false; $("trim-go").textContent = "✂️ Trim & use this part";
+    $("trim-go").disabled = false; $("trim-go").textContent = "✨ Make it fit"; $("trim-keep").hidden = true;
     setTimeout(() => $("trim").scrollIntoView({ behavior: "smooth", block: "center" }), 150);
   }
   function trimUpdate(moved) {
@@ -355,6 +358,9 @@
     const a = +$("trim-start").value, b = +$("trim-end").value;
     const go = $("trim-go"); go.disabled = true; $("trim-cancel").disabled = true;
     $("trim-vid").pause();
+    $("trim-keep").hidden = false;
+    let lock = null; // stop the screen from dimming while it works
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then((l) => (lock = l)).catch(() => {}); } catch (_) {}
     // iPhone rule: the video and its sound must be started inside the tap, so set them up right now
     const v = document.createElement("video");
     v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "auto";
@@ -372,23 +378,34 @@
     } catch (_) { dest = null; v.muted = true; }
     v._unlock = v.play().then(() => v.pause()).catch(() => {}); // must finish before we seek and record
     try {
-      let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / (b - a)) - 128000);
-      let out = await shrinkVideo(v, dest, a, b, bps, (p) => (go.textContent = "Shrinking… " + Math.floor(p * 100) + "%"));
-      if (out.size > C.MAX_VIDEO_MB * 1048576) {
-        // some phones ignore the quality setting — try once more, smaller
-        bps = Math.floor(bps * 0.55 * (C.MAX_VIDEO_MB * 1048576) / out.size);
-        out = await shrinkVideo(v, dest, a, b, bps, (p) => (go.textContent = "Shrinking more… " + Math.floor(p * 100) + "%"));
+      const len = b - a, LIMIT = C.MAX_VIDEO_MB * 1048576;
+      const pct = (label) => (p) => {
+        const left = Math.max(0, Math.round(len * (1 - p)));
+        go.textContent = label + " " + Math.floor(p * 100) + "%" + (left > 5 ? " · about " + fmt(left) + " left" : "");
+      };
+      let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len) - 128000);
+      let out = null;
+      for (let tries = 0; tries < 3 && !out; tries++) {
+        try {
+          out = await shrinkVideo(v, dest, a, b, bps, pct(tries ? "Shrinking more…" : "Shrinking…"), LIMIT);
+        } catch (e) {
+          if (!e.projected) throw e;
+          // this phone ignored the quality setting: we noticed early, so start again smaller
+          bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / e.projected));
+        }
       }
-      if (out.size > C.MAX_VIDEO_MB * 1048576) throw new Error("Still too big. Pick a shorter part and try again.");
+      if (!out || out.size > LIMIT) throw new Error("Still too big. Pick a shorter part and try again.");
       $("trim").hidden = true;
       trimFile = null;
       useVideo(out);
-      App.toast("✂️ Trimmed to " + (out.size / 1048576).toFixed(1) + " MB");
+      App.toast("✨ Ready: " + fmt(len) + " at " + (out.size / 1048576).toFixed(1) + " MB");
     } catch (e) {
       App.toast(e.message || "Couldn't shrink that video. Try trimming it in your Photos app.", true);
     } finally {
-      go.textContent = "✂️ Trim & use this part";
+      go.textContent = "✨ Make it fit";
       go.disabled = false; $("trim-cancel").disabled = false;
+      $("trim-keep").hidden = true;
+      if (lock) lock.release().catch(() => {});
       try { v.pause(); } catch (_) {}
       v.remove(); URL.revokeObjectURL(url);
       if (ac) ac.close().catch(() => {});
@@ -396,11 +413,13 @@
   };
 
   // plays the chosen part once, redrawing it smaller onto a canvas and recording the result
-  function shrinkVideo(v, dest, start, end, bps, onPct) {
+  function shrinkVideo(v, dest, start, end, bps, onPct, limit) {
     return new Promise((resolve, reject) => {
       const begin = () => {
         if (!v.videoWidth) return reject(new Error("This phone couldn't read that video."));
-        const s = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
+        // longer clips get fewer bits per second, so draw them a bit smaller to keep them sharp
+        const box = bps >= 1500000 ? 1280 : bps >= 700000 ? 960 : 854;
+        const s = Math.min(1, box / Math.max(v.videoWidth, v.videoHeight));
         const w = Math.max(2, Math.round(v.videoWidth * s / 2) * 2), h = Math.max(2, Math.round(v.videoHeight * s / 2) * 2);
         const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
         const ctx = cv.getContext("2d");
@@ -409,12 +428,13 @@
         const types = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1,mp4a", "video/mp4", "video/webm;codecs=vp8,opus", "video/webm"];
         const mime = types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
         let rec, stopped = false;
-        try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: Math.max(500000, bps), audioBitsPerSecond: 96000 }); }
+        try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: Math.max(150000, bps), audioBitsPerSecond: 128000 }); }
         catch (e) { return reject(new Error("This browser can't shrink videos. Trim it in your Photos app instead.")); }
-        const chunks = [];
-        rec.ondataavailable = (e) => e.data && e.data.size && chunks.push(e.data);
+        const chunks = []; let bytes = 0, tooBig = 0;
+        rec.ondataavailable = (e) => { if (e.data && e.data.size) { chunks.push(e.data); bytes += e.data.size; } };
         rec.onstop = () => {
           v.pause();
+          if (tooBig) { const err = new Error("too big"); err.projected = tooBig; return reject(err); }
           const type = (rec.mimeType || mime || "video/webm").split(";")[0];
           resolve(new File(chunks, "trimmed." + (type === "video/mp4" ? "mp4" : "webm"), { type }));
         };
@@ -422,7 +442,10 @@
         const draw = () => {
           if (stopped) return;
           ctx.drawImage(v, 0, 0, w, h);
-          onPct(Math.min(0.99, Math.max(0, (v.currentTime - start) / (end - start))));
+          const p = Math.min(0.99, Math.max(0, (v.currentTime - start) / (end - start)));
+          onPct(p);
+          // heading over the limit? stop now instead of finding out minutes later
+          if (limit && p > 0.12 && (end - start) > 20 && bytes / p > limit * 1.03) { tooBig = bytes / p; return finish(); }
           if (v.currentTime >= end || v.ended) return finish();
           if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(draw); else requestAnimationFrame(draw);
         };
