@@ -105,8 +105,7 @@ body.desktop #target-img { max-height:26vh; }
 #cap-time { display:none; font-size:.72rem; font-weight:600; color:#fff; font-variant-numeric:tabular-nums; letter-spacing:.02em; margin-top:-4px; }
 #cap-rail.recording #cap-time { display:block; }
 #cap-rail.recording #cap-photo { opacity:.35; pointer-events:none; }
-#cap-flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:2500; transition:opacity .35s; }
-#cap-flash.on { opacity:.8; transition:none; }
+.cap-flash { position:fixed; inset:0; background:#fff; opacity:.8; pointer-events:none; z-index:2500; transition:opacity .3s; }
 #cap-view { display:none; position:fixed; inset:0; z-index:3000; background:rgba(8,5,18,.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:20px 16px calc(20px + env(safe-area-inset-bottom)); }
 #cap-view.show { display:flex; }
@@ -274,7 +273,6 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   <button type="button" class="cap-btn" id="cap-rec" aria-label="Record a video"><span class="recdot"></span><svg class="prog" viewBox="0 0 54 54"><circle cx="27" cy="27" r="25"/></svg></button>
   <span id="cap-time">0:00</span>
 </div>
-<div id="cap-flash"></div>
 <div id="cap-view" role="dialog" aria-label="Your capture">
   <div id="cap-media"></div>
   <div class="cap-actions">
@@ -982,7 +980,9 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     capHook = function () {
       capHook = null;
       compose(ctx, c.width, c.height);
-      $("cap-flash").classList.add("on"); setTimeout(function () { $("cap-flash").classList.remove("on"); }, 60);
+      // quick white flash, added only for a moment so nothing white ever sits over the camera
+      var fl = document.createElement("div"); fl.className = "cap-flash"; document.body.appendChild(fl);
+      requestAnimationFrame(function () { fl.style.opacity = 0; setTimeout(function () { fl.remove(); }, 350); });
       c.toBlob(function (b) { if (b) showCapture(b, "photo"); }, "image/jpeg", 0.92);
     };
   }
