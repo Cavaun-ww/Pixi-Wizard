@@ -15,7 +15,7 @@
 <script src="app.js?v=20261029-1"></script>
 <script src="icons.js?v=20261029-1" defer></script>
 <style>
-  .drop .preview.tpl-prev { max-height: none; height: auto; object-fit: cover; background: none; }
+  .drop .preview.tpl-prev { max-height: none; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: #1d1538; } /* same size for every template, even while it loads */
   .tpl-wrap { margin-top: 14px; }
   .tpl-head { font-size: .9rem; color: var(--text-2); margin: 0 0 8px; }
   .tpl-row { display: grid; grid-auto-flow: column; grid-auto-columns: 132px; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
