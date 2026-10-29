@@ -1012,34 +1012,61 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
       v._pwSrc.connect(dest);
     } catch (e) { /* no sound in the recording */ }
   }
+  var recCanvas = null;
   function startRec() {
-    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { toastMsg("This phone can't record here, but photos work"); takePhoto(); return; }
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { toastMsg("This phone can't record videos here yet. Photos work"); return; }
     var c = capCanvas(720), ctx = c.getContext("2d");
-    var stream = c.captureStream(30);
-    try {
-      var dest = recAudio.ctx.createMediaStreamDestination();
-      overlaySound(dest);
-      dest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
-    } catch (e) {}
-    var types = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp8,opus", "video/webm"];
-    var mime = types.find(function (t) { return MediaRecorder.isTypeSupported(t); }) || "";
-    try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 4000000 }); }
-    catch (e) { toastMsg("This phone can't record here, but photos work"); takePhoto(); return; }
-    recChunks = [];
-    rec.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
-    rec.onstop = function () {
-      var type = (rec.mimeType || mime || "video/webm").split(";")[0];
-      var b = new Blob(recChunks, { type: type });
-      rec = null;
-      if (b.size && !rec_cancel) showCapture(b, "video");
-    };
+    // iPhone only records a canvas that's actually on the page: keep it there, invisible
+    c.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1";
+    document.body.appendChild(c); recCanvas = c;
     var last = 0;
     compose(ctx, c.width, c.height);
     capHook = function () { var t = performance.now(); if (t - last < 30) return; last = t; compose(ctx, c.width, c.height); };
-    // backup painter in case AR frames stall, so the video still records
-    (function backup() { if (!rec) return; if (performance.now() - lastRender > 200) compose(ctx, c.width, c.height); requestAnimationFrame(backup); })();
+    var painting = true;
+    (function backup() { if (!painting) return; if (performance.now() - lastRender > 200) compose(ctx, c.width, c.height); requestAnimationFrame(backup); })();
+
+    var types = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp8,opus", "video/webm"];
+    var mime = types.find(function (t) { return MediaRecorder.isTypeSupported(t); }) || "";
+    function begin(withSound) {
+      var stream = c.captureStream(30);
+      if (withSound) {
+        try {
+          var dest = recAudio.ctx.createMediaStreamDestination();
+          overlaySound(dest);
+          dest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
+        } catch (e) {}
+      }
+      var r;
+      try { r = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4000000 } : { videoBitsPerSecond: 4000000 }); }
+      catch (e) { try { r = new MediaRecorder(stream); } catch (e2) { return null; } }
+      var chunks = [];
+      r.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      r.onerror = function () { console.warn("recorder error"); };
+      r._chunks = chunks; r._sound = withSound;
+      try { r.start(500); } catch (e) { return null; }
+      return r;
+    }
+    rec = begin(true) || begin(false);
+    if (!rec) { painting = false; capHook = null; c.remove(); toastMsg("This phone couldn't start recording. Photos work"); return; }
+    // some iPhones can't record the overlay's sound: if nothing comes out after a moment, quietly restart without it
+    setTimeout(function () {
+      if (!rec || !rec._sound) return;
+      if (rec.state === "recording" && rec._chunks.length) return; // it's working
+      var old = rec; old.onstop = null; try { old.stop(); } catch (e) {}
+      var r2 = begin(false); if (r2) { r2.onstop = onStop; rec = r2; }
+    }, 1300);
+    function onStop() {
+      painting = false;
+      var r = this, type = ((r.mimeType || mime || "video/mp4").split(";")[0]) || "video/mp4";
+      var b = new Blob(r._chunks, { type: type });
+      if (recCanvas) { recCanvas.remove(); recCanvas = null; }
+      rec = null;
+      if (rec_cancel) return;
+      if (b.size) showCapture(b, "video");
+      else toastMsg("That recording didn't save. Try again");
+    }
+    rec.onstop = onStop;
     rec_cancel = false;
-    rec.start(500);
     recStart = Date.now();
     $("cap-rec").classList.add("on"); $("cap-rail").classList.add("recording");
     $("cap-rec").setAttribute("aria-label", "Stop recording");
@@ -1059,7 +1086,8 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
     $("cap-rec").querySelector("circle").style.strokeDashoffset = 157;
     $("cap-time").textContent = "0:00";
     capHook = null;
-    if (rec && rec.state !== "inactive") { rec_cancel = !!cancel; try { rec.stop(); } catch (e) {} }
+    if (rec && rec.state !== "inactive") { rec_cancel = !!cancel; try { rec.requestData && rec.requestData(); } catch (e) {} try { rec.stop(); } catch (e) {} }
+    else if (cancel && recCanvas) { recCanvas.remove(); recCanvas = null; }
   }
 
   // photo button / record button (tap to start, tap again to stop)
