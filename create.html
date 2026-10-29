@@ -9,12 +9,19 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261028-2">
+<link rel="stylesheet" href="styles.css?v=20261029-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261028-2"></script>
-<script src="app.js?v=20261028-2"></script>
-<script src="icons.js?v=20261028-2" defer></script>
+<script src="config.js?v=20261029-1"></script>
+<script src="app.js?v=20261029-1"></script>
+<script src="icons.js?v=20261029-1" defer></script>
 <style>
+  .tpl-wrap { margin-top: 14px; }
+  .tpl-head { font-size: .9rem; color: var(--text-2); margin: 0 0 8px; }
+  .tpl-row { display: grid; grid-auto-flow: column; grid-auto-columns: 132px; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .tpl { scroll-snap-align: start; border: 1px solid var(--line); background: #160e2a; border-radius: 14px; padding: 0; overflow: hidden; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+  .tpl img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #1d1538; }
+  .tpl span { display: block; padding: 7px 9px 8px; font-size: .8rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tpl.on { border-color: var(--pink); box-shadow: 0 0 0 2px var(--pink); }
   .trim { margin-top: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #160e2a; }
   .trim h4 { margin: 0 0 4px; font-size: 1.05rem; }
   .trim video { width: 100%; max-height: 300px; border-radius: 12px; background: #000; margin: 12px 0; display: block; object-fit: contain; }
@@ -89,6 +96,10 @@
           <div>Drop a video, GIF or photo here or <span class="browse">browse</span></div>
           <div class="hint">MP4 · WebM · GIF · JPG · PNG</div>
         </div>
+      </div>
+      <div class="tpl-wrap">
+        <div class="tpl-head">Or pick a template</div>
+        <div class="tpl-row" id="tpl-row"></div>
       </div>
       <div class="trim" id="trim" hidden>
         <h4>✂️ Let's get your video ready</h4>
@@ -268,8 +279,34 @@
     refresh();
   });
 
+  // ── ready-made overlays anyone can use (files live in the site's templates/ folder) ──
+  const TEMPLATES = [
+    { id: "birthday-party", name: "Birthday party", w: 1170, h: 638, key: "green" },
+    { id: "birthday-gold", name: "Happy Birthday", w: 1164, h: 642, key: "green" },
+    { id: "congrats-2", name: "Congrats!", w: 1170, h: 616, key: "green" },
+    { id: "congrats-balloons", name: "Congrats balloons", w: 1170, h: 642, key: "green" },
+    { id: "love-you", name: "I Love You", w: 1170, h: 612, key: "green" },
+    { id: "its-a-boy", name: "It's a Boy!", w: 1280, h: 720, key: "none" },
+    { id: "its-a-girl", name: "It's a Girl!", w: 1280, h: 720, key: "none" },
+  ];
+  $("tpl-row").innerHTML = TEMPLATES.map((t) =>
+    '<button type="button" class="tpl" data-id="' + t.id + '"><img loading="lazy" alt="" src="templates/' + t.id + '.jpg"><span>' + t.name + "</span></button>").join("");
+  function markTemplate(id) { $("tpl-row").querySelectorAll(".tpl").forEach((b) => b.classList.toggle("on", b.dataset.id === id)); }
+  $("tpl-row").addEventListener("click", (e) => {
+    const b = e.target.closest(".tpl"); if (!b) return;
+    const t = TEMPLATES.find((x) => x.id === b.dataset.id); if (!t) return;
+    $("trim").hidden = true; $("trim-vid").pause(); trimFile = null; $("file-vid").value = "";
+    markTemplate(t.id);
+    vid = { template: "templates/" + t.id + ".mp4", w: t.w, h: t.h, kind: "video", name: t.name };
+    const p = new Image(); p.alt = ""; p.src = "templates/" + t.id + ".jpg"; // shows it the way it looks in AR
+    showPreview("drop-vid", p, "Template · " + t.name);
+    // green-screen templates float on the photo: switch on green removal for them
+    const k = $("fx").querySelector('#fx-key [data-k="' + t.key + '"]'); if (k) k.click();
+    $("n2").classList.add("done"); $("n2").textContent = "✓"; refresh();
+  });
+
   wireDrop("drop-vid", "file-vid", (file) => {
-    $("trim").hidden = true; $("trim-vid").pause(); trimFile = null;
+    $("trim").hidden = true; $("trim-vid").pause(); trimFile = null; markTemplate(null);
     const done = (meta) => { $("n2").classList.add("done"); $("n2").textContent = "✓"; refresh(); };
     // a photo or animated GIF as the overlay (PNG/GIF with a transparent background floats like a sticker)
     const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
@@ -603,13 +640,14 @@
       // 3. upload files
       const folder = uid + "/" + crypto.randomUUID();
       const isPic = vid.kind === "image";
-      const ext = isPic
+      const ext = vid.template ? "mp4" : isPic
         ? (vid.gif ? "gif" : ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[vid.file.type])
         : (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
       const files = [
         { path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading photo…", pct: 56, to: 60 },
         { path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", pct: 60, to: 64 },
-        { path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file, type: vid.gif ? "image/gif" : (vid.file.type || "video/mp4"), msg: vid.gif ? "Uploading GIF…" : isPic ? "Uploading overlay photo…" : "Uploading video…", pct: 64, to: 94 },
+        // a template is already on the site, so there's nothing to upload for it
+        ...(vid.template ? [] : [{ path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file, type: vid.gif ? "image/gif" : (vid.file.type || "video/mp4"), msg: vid.gif ? "Uploading GIF…" : isPic ? "Uploading overlay photo…" : "Uploading video…", pct: 64, to: 94 }]),
       ];
       for (const f of files) {
         progress(f.pct, f.msg);
@@ -624,7 +662,7 @@
         title: $("title").value.trim().slice(0, 80),
         image_path: files[0].path,
         mind_path: files[1].path,
-        video_path: files[2].path,
+        video_path: vid.template || files[2].path,
         image_aspect: img.w / img.h,
         video_aspect: vid.w / vid.h,
         is_private: $("is-private").checked,

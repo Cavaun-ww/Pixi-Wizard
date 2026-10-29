@@ -14,8 +14,8 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
-<script src="config.js?v=20261028-2"></script>
-<script src="icons.js?v=20261028-2" defer></script>
+<script src="config.js?v=20261029-1"></script>
+<script src="icons.js?v=20261029-1" defer></script>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root { --accent:#a855f7; --accent-2:#d8b4fe; --text:#f6f0ff; --text-2:#c4b6e0; --muted:#8a7bab; --line:#2a2048; --magic:linear-gradient(120deg,#ffc24b 0%,#ff5fd2 45%,#a855f7 100%); --good:#3ddc97; --bad:#ff6b6b; }
@@ -266,7 +266,10 @@ body .target-frame #target-img { position: absolute; inset: 0; width: 100%; heig
   $("site-name").innerHTML = C.SITE_NAME.replace(/[&<>]/g, "").split(" ").map(function (w, i) { return i ? w : w.replace(/i/g, '<span class="dia-i">\u0131</span>'); }).join(" ");
   document.querySelectorAll(".js-name").forEach(function (e) { e.textContent = C.SITE_NAME; });
   function setStatus(msg, cls) { var el = $("status-line"); el.textContent = msg; el.className = cls || ""; }
-  function pub(path) { return sb.storage.from("ar").getPublicUrl(path).data.publicUrl; }
+  function pub(path) {
+    if (/^templates\//.test(path || "")) return new URL(path, location.href).href; // ready-made overlay hosted with the site
+    return sb.storage.from("ar").getPublicUrl(path).data.publicUrl;
+  }
   function shareUrl() { return location.origin + location.pathname + (isExplore ? "?explore=1" : "?x=" + encodeURIComponent(slug)); }
   function byName(x) { var p = x.profiles; return p ? (p.display_name || (p.handle ? "@" + p.handle : "")) : ""; }
 

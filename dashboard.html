@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#0b0716">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261028-2">
+<link rel="stylesheet" href="styles.css?v=20261029-1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261028-2"></script>
-<script src="app.js?v=20261028-2"></script>
-<script src="icons.js?v=20261028-2" defer></script>
+<script src="config.js?v=20261029-1"></script>
+<script src="app.js?v=20261029-1"></script>
+<script src="icons.js?v=20261029-1" defer></script>
 <style>
   .top { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .top .card { margin: 0; }
@@ -568,7 +568,7 @@
     const { error } = await sb.from("experiences").delete().eq("id", x.id);
     if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
     if (profile.bg_image_path && profile.bg_image_path !== bgImage) sb.storage.from(App.BUCKET).remove([profile.bg_image_path]);
-    await sb.storage.from(App.BUCKET).remove([x.image_path, x.mind_path, x.video_path]);
+    await sb.storage.from(App.BUCKET).remove([x.image_path, x.mind_path, x.video_path].filter((p) => p && !/^templates\//.test(p))); // templates are shared
     App.toast("Deleted");
     loadList(); loadPlan();
   }
